@@ -1,0 +1,12 @@
+defaults:
+  - city_details
+  - _self_
+description: Property 1 Description
+address: "1234 Sesame Stree, New York, NY 10001"
+value: 200000
+condo_fees: 200
+link: https://www.sesamestreet.com/realestate/property1
+bedrooms: 2
+bathrooms: 1
+area_sqft: 1000
+year_built: 2000

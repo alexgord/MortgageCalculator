@@ -1,0 +1,12 @@
+defaults:
+  - city_details
+  - _self_
+description: Property 2 Description
+address: "4321 Sesame Stree, New York, NY 10001"
+value: 300000
+condo_fees: 200
+link: https://www.sesamestreet.com/realestate/property2
+bedrooms: 2
+bathrooms: 1
+area_sqft: 1500
+year_built: 2002
