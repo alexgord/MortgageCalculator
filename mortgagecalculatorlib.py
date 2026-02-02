@@ -66,7 +66,7 @@ def percent_to_decimal(percentage: float) -> float:
     return percentage / 100
 
 
-def land_transfer_tax_percentage(value: float) -> float:
+def land_transfer_tax_rate_decimal(value: float) -> float:
     """
     Calculate land transfer tax rate based on property value.
     
@@ -88,7 +88,7 @@ def land_transfer_tax_percentage(value: float) -> float:
 
 def calculate_land_transfer_tax(value: float) -> float:
     """Calculate the land transfer tax amount for a property."""
-    return value * land_transfer_tax_percentage(value)
+    return value * land_transfer_tax_rate_decimal(value)
 
 
 def calculate_monthly_interest_rate(yearly_rate_decimal: float) -> float:
@@ -150,7 +150,7 @@ class CalculatedMortgage:
         school_tax_decimal = percent_to_decimal(property_details.school_tax)
         
         #Calculate all mortgage related values
-        self.land_transfer_tax_rate = round(land_transfer_tax_percentage(property_details.value), 4)
+        self.land_transfer_tax_rate = round(land_transfer_tax_rate_decimal(property_details.value), 4)
         self.land_transfer_tax = round(calculate_land_transfer_tax(property_details.value), 2)
         one_time_costs = [cfg.necessary_expenses.notary_cost, cfg.necessary_expenses.inspection_cost, self.land_transfer_tax]
         self.all_one_time_costs = round(sum(one_time_costs), 2)
@@ -186,8 +186,8 @@ class CalculatedMortgage:
             Monthly_Mortgage_Payment=self.mortgage_payment,
             Condo_Fees=self.property_details.condo_fees,
             Total_Monthly_Costs=self.total_monthly_costs,
-            Percentage_of_Salary=self.percentage_of_salary,
-            Land_Transfer_Tax_Rate=self.land_transfer_tax_rate,
+            Percentage_of_Salary=self.percentage_of_salary * 100,
+            Land_Transfer_Tax_Rate=self.land_transfer_tax_rate * 100,
             Land_Transfer_Tax=self.land_transfer_tax,
             Notary_Cost=self.cfg.necessary_expenses.notary_cost,
             Inspection_Cost=self.cfg.necessary_expenses.inspection_cost,
