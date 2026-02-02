@@ -162,7 +162,7 @@ class CalculatedMortgage:
         self.mortgage_payment = round(calculate_mortgage_payment(interest_rate_decimal, cfg.loan_parameters.years_of_loan, self.principal), 2)
         monthly_costs = [self.mortgage_payment, property_details.condo_fees]
         self.total_monthly_costs = round(sum(monthly_costs), 2)
-        self.percentage_of_salary = self.total_monthly_costs / cfg.loan_parameters.monthly_salary
+        self.percentage_of_salary = round(self.total_monthly_costs / cfg.loan_parameters.monthly_salary, 2)
 
     def to_result(self) -> MortgageResult:
         """Convert the calculated mortgage to a MortgageResult for reporting.
