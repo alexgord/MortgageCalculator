@@ -187,6 +187,7 @@ multirun/
 
 # Output and settings specific to this project
 properties_output/
+example_properties_output/
 settings/
 
 # Visual Studio Code Specific Files

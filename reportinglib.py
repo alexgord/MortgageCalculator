@@ -74,36 +74,6 @@ def create_bar_chart(
     finally:
         plt.close()
 
-
-def print_mortgage_details(calculated_mortgage: CalculatedMortgage, cfg: PropertiesListConfig) -> None:
-    """Print detailed mortgage information to console."""
-    print(f"Yearly interest rate: {calculated_mortgage.property_details.interest_rate}")
-    print(f"Length of loan in years: {calculated_mortgage.property_details.years_of_loan}")
-    print(f"Cost of condo: {calculated_mortgage.property_details.value}")
-    print(f"Down payment: {cfg.loan_parameters.down_payment}")
-    print(f"Principal: {calculated_mortgage.principal}")
-
-    print("\nOne time costs:")
-    print(f"Notary: {cfg.necessary_expenses.notary_cost}")
-    print(f"Inspection: {cfg.necessary_expenses.inspection_cost}")
-    print(f"Land transfer tax rate: {calculated_mortgage.land_transfer_tax_rate}")
-    print(f"Land transfer tax: {calculated_mortgage.land_transfer_tax}")
-    print(f"Total: {calculated_mortgage.all_one_time_costs}")
-
-    print("\nMonthly payments:")
-    print(f"Mortgage: {calculated_mortgage.mortgage_payment}")
-    print(f"Condo fees: {calculated_mortgage.property_details.condo_fees}")
-    print(f"Total: {calculated_mortgage.total_monthly_costs}")
-    print(f"Percentage of salary: {calculated_mortgage.percentage_of_salary}")
-
-    print("\nYearly costs:")
-    print(f"Property tax rate: {calculated_mortgage.property_details.property_tax}")
-    print(f"Property tax: {calculated_mortgage.yearly_property_tax}")
-    print(f"School tax rate: {calculated_mortgage.property_details.school_tax}")
-    print(f"School tax: {calculated_mortgage.yearly_school_tax}")
-    print(f"Home insurance: {calculated_mortgage.property_details.home_insurance}")
-    print(f"Total: {calculated_mortgage.total_yearly_costs}")
-
 def generate_monthly_report_chart(results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
     """Generate monthly costs comparison chart."""
     monthly_costs = [row[K.TOTAL_MONTHLY_COSTS] for row in results]

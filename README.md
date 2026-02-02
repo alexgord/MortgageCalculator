@@ -44,14 +44,14 @@ A Python-based mortgage calculator that analyzes multiple properties and generat
 Run the calculator with the default configuration:
 
 ```bash
-python mortgagecalculator_batch.py -cd settings -cn properties_list
+python mortgagecalculator_batch.py -cd example_settings -cn property_list
 ```
 
 This will:
-1. Load property configurations from `settings/`
+1. Load property configurations from `example_settings/`
 2. Calculate mortgage details for each property
-3. Generate a CSV summary at `properties_output/properties_summary.csv`
-4. Generate a Markdown report with charts at `properties_output/properties_report.md`
+3. Generate a CSV summary at `example_properties_output/properties_summary.csv`
+4. Generate a Markdown report with charts at `example_properties_output/properties_report.md`
 
 ## Configuration
 
