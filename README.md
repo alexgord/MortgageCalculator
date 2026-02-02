@@ -44,7 +44,7 @@ A Python-based mortgage calculator that analyzes multiple properties and generat
 Run the calculator with the default configuration:
 
 ```bash
-python mortgagecalculator_batch.py -cd settings -cn properties_list
+python mortgagecalculator_batch.py -cd example_settings -cn property_list
 ```
 
 This will:

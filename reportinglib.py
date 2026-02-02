@@ -74,36 +74,6 @@ def create_bar_chart(
     finally:
         plt.close()
 
-
-def print_mortgage_details(calculated_mortgage: CalculatedMortgage, cfg: PropertiesListConfig) -> None:
-    """Print detailed mortgage information to console."""
-    print(f"Yearly interest rate: {calculated_mortgage.property_details.interest_rate}")
-    print(f"Length of loan in years: {calculated_mortgage.property_details.years_of_loan}")
-    print(f"Cost of condo: {calculated_mortgage.property_details.value}")
-    print(f"Down payment: {cfg.loan_parameters.down_payment}")
-    print(f"Principal: {calculated_mortgage.principal}")
-
-    print("\nOne time costs:")
-    print(f"Notary: {cfg.necessary_expenses.notary_cost}")
-    print(f"Inspection: {cfg.necessary_expenses.inspection_cost}")
-    print(f"Land transfer tax rate: {calculated_mortgage.land_transfer_tax_rate}")
-    print(f"Land transfer tax: {calculated_mortgage.land_transfer_tax}")
-    print(f"Total: {calculated_mortgage.all_one_time_costs}")
-
-    print("\nMonthly payments:")
-    print(f"Mortgage: {calculated_mortgage.mortgage_payment}")
-    print(f"Condo fees: {calculated_mortgage.property_details.condo_fees}")
-    print(f"Total: {calculated_mortgage.total_monthly_costs}")
-    print(f"Percentage of salary: {calculated_mortgage.percentage_of_salary}")
-
-    print("\nYearly costs:")
-    print(f"Property tax rate: {calculated_mortgage.property_details.property_tax}")
-    print(f"Property tax: {calculated_mortgage.yearly_property_tax}")
-    print(f"School tax rate: {calculated_mortgage.property_details.school_tax}")
-    print(f"School tax: {calculated_mortgage.yearly_school_tax}")
-    print(f"Home insurance: {calculated_mortgage.property_details.home_insurance}")
-    print(f"Total: {calculated_mortgage.total_yearly_costs}")
-
 def generate_monthly_report_chart(results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
     """Generate monthly costs comparison chart."""
     monthly_costs = [row[K.TOTAL_MONTHLY_COSTS] for row in results]
@@ -286,14 +256,14 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
             buffer.write(f"| Mortgage Payment | ${row[K.MONTHLY_MORTGAGE_PAYMENT]:,.2f} |\n")
             buffer.write(f"| Condo Fees | ${row[K.CONDO_FEES]:,.2f} |\n")
             buffer.write(f"| **Total Monthly Costs** | **${row[K.TOTAL_MONTHLY_COSTS]:,.2f}** |\n")
-            buffer.write(f"| Percentage of Salary | {row[K.PERCENTAGE_OF_SALARY]:.2f}% |\n")
+            buffer.write(f"| Percentage of Salary | {row[K.PERCENTAGE_OF_SALARY] * 100:.2f}% |\n")
 
             buffer.write(f"![Monthly Breakdown]({i}_monthly_breakdown.png)\n")
             
             buffer.write("#### One-Time Costs\n")
             buffer.write("| Item | Amount |\n")
             buffer.write("|------|--------|\n")
-            buffer.write(f"| Land Transfer Tax ({row[K.LAND_TRANSFER_TAX_RATE]:.2f}%) | ${row[K.LAND_TRANSFER_TAX]:,.2f} |\n")
+            buffer.write(f"| Land Transfer Tax ({row[K.LAND_TRANSFER_TAX_RATE] * 100:.2f}%) | ${row[K.LAND_TRANSFER_TAX]:,.2f} |\n")
             buffer.write(f"| Notary Cost | ${row[K.NOTARY_COST]:,.2f} |\n")
             buffer.write(f"| Inspection Cost | ${row[K.INSPECTION_COST]:,.2f} |\n")
             buffer.write(f"| **Total One-Time Costs** | **${row[K.TOTAL_ONE_TIME_COSTS]:,.2f}** |\n")
@@ -352,7 +322,7 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
         # % of Salary
         buffer.write("| **% of Salary** |")
         for row in results:
-            buffer.write(f" {row[K.PERCENTAGE_OF_SALARY]:.1f}% |")
+            buffer.write(f" {row[K.PERCENTAGE_OF_SALARY] * 100:.1f}% |")
         buffer.write("\n")
         
         # Yearly Costs
@@ -411,7 +381,7 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
         sorted_by_salary = sorted(enumerate(results, 1), key=lambda x: x[1][K.PERCENTAGE_OF_SALARY])
         buffer.write("**Most Affordable (% of Salary):**\n")
         for rank, (idx, row) in enumerate(sorted_by_salary, 1):
-            buffer.write(f"{rank}. [Property {idx}](#property-{idx}) - {row[K.PERCENTAGE_OF_SALARY]:.1f}%\n")
+            buffer.write(f"{rank}. [Property {idx}](#property-{idx}) - {row[K.PERCENTAGE_OF_SALARY] * 100:.1f}%\n")
         buffer.write("\n")
 
         buffer.write("---\n")
