@@ -9,23 +9,28 @@ class PropertyConfig:
     # Property details
     value: float
     condo_fees: float
+    area_sqft: float
+    bedrooms: int
+    bathrooms: int
+    year_built: int
     
     # Loan details
     interest_rate: float
     years_of_loan: int
     
-    # Taxes (as percentages)
+    # Taxes (as percentages, up to 5 decimal places e.g. 0.08423 = 0.08423%)
     property_tax: float
     school_tax: float
     
     # Insurance and costs
-    home_insurance: float
+    yearly_home_insurance: float
     notary_cost: float
     inspection_cost: float
     
     # Optional metadata
     description: Optional[str] = None
     address: Optional[str] = None
+    link: Optional[str] = None
 
 @dataclass
 class ChartConfig:
@@ -42,6 +47,7 @@ class LoanParametersConfig:
     interest_rate: float
     years_of_loan: int
     monthly_salary: float
+    monthly_debt_payment: float
 
 @dataclass
 class NecessaryExpensesConfig:

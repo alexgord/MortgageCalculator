@@ -5,13 +5,27 @@ import io
 import matplotlib
 import matplotlib.pyplot as plt
 
-from mortgagecalculatorlib import CalculatedMortgage
-from config_dataclasses import PropertiesListConfig, PropertyConfig
+from config_dataclasses import PropertiesListConfig
 from custom_types import MortgageResult, ResultKeys as K
 
 matplotlib.use('Agg')  # Use non-interactive backend for saving files
 
 logger = logging.getLogger(__name__)
+
+
+def format_rate(value: float) -> str:
+    """Format a rate/percentage value with up to 5 decimal places, stripping trailing zeros.
+    
+    Examples:
+        0.5337  -> '0.5337'
+        0.08423 -> '0.08423'
+        4.69    -> '4.69'
+        1.5     -> '1.5'
+    """
+    return f"{value:.5f}".rstrip('0').rstrip('.')
+
+# Color palette for multi-property comparison charts
+PROPERTY_COLORS = ['#E91E63', '#3F51B5', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#FF5722', '#8BC34A', '#673AB7', '#009688']
 
 
 class ReportGenerationError(Exception):
@@ -55,6 +69,9 @@ def create_bar_chart(
         ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+    ax.tick_params(axis='x', labelrotation=30)
+    for tick in ax.get_xticklabels():
+        tick.set_ha('right')
     
     bar_label_kwargs = {'fmt': fmt, 'padding': 3}
     if label_fontsize is not None:
@@ -74,6 +91,10 @@ def create_bar_chart(
     finally:
         plt.close()
 
+def _cycle_colors(n: int) -> list[str]:
+    """Return a list of n colors cycling through the property palette."""
+    return [PROPERTY_COLORS[i % len(PROPERTY_COLORS)] for i in range(n)]
+
 def generate_monthly_report_chart(results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
     """Generate monthly costs comparison chart."""
     monthly_costs = [row[K.TOTAL_MONTHLY_COSTS] for row in results]
@@ -84,7 +105,7 @@ def generate_monthly_report_chart(results: list[MortgageResult], labels: list[st
         cfg=cfg,
         title='Total Monthly Costs by Property',
         ylabel='Total Monthly Cost ($)',
-        colors='#E91E63',
+        colors=_cycle_colors(len(results)),
     )
 
 def generate_yearly_report_chart(results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
@@ -97,7 +118,7 @@ def generate_yearly_report_chart(results: list[MortgageResult], labels: list[str
         cfg=cfg,
         title='Total Yearly Costs by Property',
         ylabel='Amount ($)',
-        colors='#9C27B0',
+        colors=_cycle_colors(len(results)),
         label_fontsize=8,
     )
 
@@ -111,7 +132,7 @@ def generate_property_value_report_chart(results: list[MortgageResult], labels: 
         cfg=cfg,
         title='Property Values by Property',
         ylabel='Property Value ($)',
-        colors='#3F51B5',
+        colors=_cycle_colors(len(results)),
     )
 
 def generate_one_time_report_chart(results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
@@ -124,14 +145,14 @@ def generate_one_time_report_chart(results: list[MortgageResult], labels: list[s
         cfg=cfg,
         title='Total One-Time Costs by Property',
         ylabel='Amount ($)',
-        colors='#4CAF50',
+        colors=_cycle_colors(len(results)),
         label_fontsize=8,
     )
 
 def generate_monthly_breakdown_chart(property_number: int, result: MortgageResult, output_dir: Path, cfg: PropertiesListConfig) -> None:
     """Generate monthly cost breakdown chart for a single property."""
-    categories = ['Mortgage Payment', 'Condo Fees']
-    values = [result[K.MONTHLY_MORTGAGE_PAYMENT], result[K.CONDO_FEES]]
+    categories = ['Mortgage Payment', 'Condo Fees', 'Property Tax', 'School Tax', 'Home Insurance']
+    values = [result[K.MONTHLY_MORTGAGE_PAYMENT], result[K.CONDO_FEES], result[K.MONTHLY_PROPERTY_TAX], result[K.MONTHLY_SCHOOL_TAX], result[K.MONTHLY_HOME_INSURANCE]]
     create_bar_chart(
         labels=categories,
         values=values,
@@ -139,15 +160,15 @@ def generate_monthly_breakdown_chart(property_number: int, result: MortgageResul
         cfg=cfg,
         title=f'Monthly Cost Breakdown for Property {property_number}',
         ylabel='Amount ($)',
-        colors=['#2196F3', '#FFC107'],
+        colors=['#2196F3', '#FFC107', '#4CAF50', '#FF5722', '#9C27B0'],
         xlabel=None,
-        fmt='$%.2f',
+        fmt='$%.2f'
     )
 
 def generate_yearly_breakdown_chart(property_number: int, result: MortgageResult, output_dir: Path, cfg: PropertiesListConfig) -> None:
     """Generate yearly cost breakdown chart for a single property."""
     categories = ['Property Tax', 'School Tax', 'Home Insurance']
-    values = [result[K.YEARLY_PROPERTY_TAX], result[K.YEARLY_SCHOOL_TAX], result[K.HOME_INSURANCE]]
+    values = [result[K.YEARLY_PROPERTY_TAX], result[K.YEARLY_SCHOOL_TAX], result[K.YEARLY_HOME_INSURANCE]]
     create_bar_chart(
         labels=categories,
         values=values,
@@ -220,7 +241,10 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
         buffer.write("| Item | Value |\n")
         buffer.write("|------|-------|\n")
         buffer.write(f"| Down Payment | ${cfg.loan_parameters.down_payment:,.2f} |\n")
-        buffer.write(f"| Monthly Salary | ${cfg.loan_parameters.monthly_salary:,.2f} |\n")
+        buffer.write(f"| Monthly Salary (Gross) | ${cfg.loan_parameters.monthly_salary:,.2f} |\n")
+        buffer.write(f"| Monthly Debt Payments | ${cfg.loan_parameters.monthly_debt_payment:,.2f} |\n")
+
+        buffer.write("\n")
         
         buffer.write("## Properties Analyzed:\n")
 
@@ -246,37 +270,69 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
             buffer.write(f"| Year Built | {row[K.YEAR_BUILT]} |\n")
             buffer.write(f"| Bedrooms | {row[K.BEDROOMS]} |\n")
             buffer.write(f"| Bathrooms | {row[K.BATHROOMS]} |\n")
-            buffer.write(f"| Principal | ${row[K.PRINCIPAL]:,.2f} |\n")
-            buffer.write(f"| Interest Rate | {row[K.INTEREST_RATE]:.2f}% |\n")
+            buffer.write(f"| Loan Amount | ${row[K.LOAN_AMOUNT]:,.2f} |\n")
+            buffer.write(f"| Interest Rate | {format_rate(row[K.INTEREST_RATE])}% |\n")
             buffer.write(f"| Loan Term | {row[K.YEARS_OF_LOAN]} years |\n")
+            buffer.write(f"| Monthly Interest (Initial) | ${row[K.MONTHLY_INTEREST]:,.2f} |\n")
+            buffer.write(f"| Yearly Interest (Initial) | ${row[K.YEARLY_INTEREST]:,.2f} |\n")
+            buffer.write(f"| Total Interest (Loan Term) | ${row[K.TOTAL_INTEREST]:,.2f} |\n")
+
+            buffer.write("\n")
             
             buffer.write("#### Monthly Costs\n")
             buffer.write("| Item | Amount |\n")
             buffer.write("|------|--------|\n")
             buffer.write(f"| Mortgage Payment | ${row[K.MONTHLY_MORTGAGE_PAYMENT]:,.2f} |\n")
             buffer.write(f"| Condo Fees | ${row[K.CONDO_FEES]:,.2f} |\n")
+            buffer.write(f"| Property Tax (Amortized) | ${row[K.MONTHLY_PROPERTY_TAX]:,.2f} |\n")
+            buffer.write(f"| School Tax (Amortized) | ${row[K.MONTHLY_SCHOOL_TAX]:,.2f} |\n")
+            buffer.write(f"| Home Insurance (Amortized) | ${row[K.MONTHLY_HOME_INSURANCE]:,.2f} |\n")
             buffer.write(f"| **Total Monthly Costs** | **${row[K.TOTAL_MONTHLY_COSTS]:,.2f}** |\n")
-            buffer.write(f"| Percentage of Salary | {row[K.PERCENTAGE_OF_SALARY]:.2f}% |\n")
+
+            buffer.write("\n")
 
             buffer.write(f"![Monthly Breakdown]({i}_monthly_breakdown.png)\n")
+
+            buffer.write("#### Affordability Ratios\n")
+            buffer.write("| Ratio | Value | Guideline |\n")
+            buffer.write("|-------|-------|-----------|\n")
+            buffer.write(f"| GDS (Gross Debt Service) | {format_rate(row[K.GDS_RATIO])}% | ≤ 32% |\n")
+            buffer.write(f"| TDS (Total Debt Service) | {format_rate(row[K.TDS_RATIO])}% | ≤ 40% |\n")
+            buffer.write("\n*GDS = Total housing costs / Gross monthly income. "
+                         "TDS = (Housing costs + other debts) / Gross monthly income.*\n\n")
+            
+            buffer.write("\n")
             
             buffer.write("#### One-Time Costs\n")
             buffer.write("| Item | Amount |\n")
             buffer.write("|------|--------|\n")
-            buffer.write(f"| Land Transfer Tax ({row[K.LAND_TRANSFER_TAX_RATE]:.2f}%) | ${row[K.LAND_TRANSFER_TAX]:,.2f} |\n")
+            buffer.write(f"| Land Transfer Tax ({format_rate(row[K.LAND_TRANSFER_TAX_RATE])}%) | ${row[K.LAND_TRANSFER_TAX]:,.2f} |\n")
             buffer.write(f"| Notary Cost | ${row[K.NOTARY_COST]:,.2f} |\n")
             buffer.write(f"| Inspection Cost | ${row[K.INSPECTION_COST]:,.2f} |\n")
             buffer.write(f"| **Total One-Time Costs** | **${row[K.TOTAL_ONE_TIME_COSTS]:,.2f}** |\n")
+
+            buffer.write("\n")
             
             buffer.write(f"![One-Time Breakdown]({i}_one_time_breakdown.png)\n")
+
+            buffer.write("#### Cash to Close\n")
+            buffer.write("| Item | Amount |\n")
+            buffer.write("|------|--------|\n")
+            buffer.write(f"| Down Payment | ${cfg.loan_parameters.down_payment:,.2f} |\n")
+            buffer.write(f"| Total One-Time Costs | ${row[K.TOTAL_ONE_TIME_COSTS]:,.2f} |\n")
+            buffer.write(f"| **Estimated Cash to Close** | **${row[K.CASH_TO_CLOSE]:,.2f}** |\n")
+
+            buffer.write("\n")
 
             buffer.write("#### Yearly Costs\n")
             buffer.write("| Item | Amount |\n")
             buffer.write("|------|--------|\n")
-            buffer.write(f"| Property Tax ({row[K.PROPERTY_TAX_RATE]:.2f}%) | ${row[K.YEARLY_PROPERTY_TAX]:,.2f} |\n")
-            buffer.write(f"| School Tax ({row[K.SCHOOL_TAX_RATE]:.2f}%) | ${row[K.YEARLY_SCHOOL_TAX]:,.2f} |\n")
-            buffer.write(f"| Home Insurance | ${row[K.HOME_INSURANCE]:,.2f} |\n")
+            buffer.write(f"| Property Tax ({format_rate(row[K.PROPERTY_TAX_RATE])}%) | ${row[K.YEARLY_PROPERTY_TAX]:,.2f} |\n")
+            buffer.write(f"| School Tax ({format_rate(row[K.SCHOOL_TAX_RATE])}%) | ${row[K.YEARLY_SCHOOL_TAX]:,.2f} |\n")
+            buffer.write(f"| Home Insurance | ${row[K.YEARLY_HOME_INSURANCE]:,.2f} |\n")
             buffer.write(f"| **Total Yearly Costs** | **${row[K.TOTAL_YEARLY_COSTS]:,.2f}** |\n")
+
+            buffer.write("\n")
             
             buffer.write(f"![Yearly Breakdown]({i}_yearly_breakdown.png)\n")
 
@@ -298,7 +354,7 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
         
         # Main comparison table
         buffer.write("### Side-by-Side Comparison\n")
-        buffer.write("| Metric |")
+        buffer.write("| |")
         for i in range(1, len(results) + 1):
             buffer.write(f" [Property {i}](#property-{i}) |")
         buffer.write("\n")
@@ -307,53 +363,106 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
         buffer.write("----------|" * len(results))
         buffer.write("\n")
         
+        # --- Property Info ---
+        buffer.write("| **Property Info** |")
+        buffer.write(" |" * len(results))
+        buffer.write("\n")
+        
+        # Address
+        buffer.write("| Address |")
+        for row in results:
+            address = row[K.ADDRESS] or '—'
+            buffer.write(f" {address} |")
+        buffer.write("\n")
+        
+        # Description
+        buffer.write("| Description |")
+        for row in results:
+            description = row[K.DESCRIPTION] or '—'
+            buffer.write(f" {description} |")
+        buffer.write("\n")
+        
+        # Link
+        buffer.write("| Listing |")
+        for row in results:
+            if row[K.LINK]:
+                buffer.write(f" [View]({row[K.LINK]}) |")
+            else:
+                buffer.write(" — |")
+        buffer.write("\n")
+        
+        # --- Physical Details ---
+        buffer.write("| **Physical Details** |")
+        buffer.write(" |" * len(results))
+        buffer.write("\n")
+        
+        # Area
+        buffer.write("| Area (sqft) |")
+        for row in results:
+            buffer.write(f" {row[K.AREA]:,} |")
+        buffer.write("\n")
+        
+        # Bedrooms/Bathrooms
+        buffer.write("| Bed/Bath |")
+        for row in results:
+            buffer.write(f" {row[K.BEDROOMS]}/{row[K.BATHROOMS]} |")
+        buffer.write("\n")
+        
+        # --- Financial Overview ---
+        buffer.write("| **Financial Overview** |")
+        buffer.write(" |" * len(results))
+        buffer.write("\n")
+        
         # Property Value
-        buffer.write("| **Property Value** |")
+        buffer.write("| Property Value |")
         for row in results:
             buffer.write(f" ${row[K.PROPERTY_VALUE]:,.0f} |")
         buffer.write("\n")
         
+        # Price per sqft
+        buffer.write("| Price/sqft |")
+        for row in results:
+            buffer.write(f" ${row[K.PRICE_PER_SQFT]:,.2f} |")
+        buffer.write("\n")
+        
         # Monthly Costs
-        buffer.write("| **Monthly Costs** |")
+        buffer.write("| Monthly Costs |")
         for row in results:
             buffer.write(f" ${row[K.TOTAL_MONTHLY_COSTS]:,.2f} |")
         buffer.write("\n")
         
-        # % of Salary
-        buffer.write("| **% of Salary** |")
-        for row in results:
-            buffer.write(f" {row[K.PERCENTAGE_OF_SALARY]:.1f}% |")
-        buffer.write("\n")
-        
         # Yearly Costs
-        buffer.write("| **Yearly Costs** |")
+        buffer.write("| Yearly Costs |")
         for row in results:
             buffer.write(f" ${row[K.TOTAL_YEARLY_COSTS]:,.2f} |")
         buffer.write("\n")
         
         # One-Time Costs
-        buffer.write("| **One-Time Costs** |")
+        buffer.write("| One-Time Costs |")
         for row in results:
             buffer.write(f" ${row[K.TOTAL_ONE_TIME_COSTS]:,.2f} |")
         buffer.write("\n")
         
-        # Area
-        buffer.write("| **Area (sqft)** |")
+        # Cash to Close
+        buffer.write("| Cash to Close |")
         for row in results:
-            buffer.write(f" {row[K.AREA]:,} |")
+            buffer.write(f" ${row[K.CASH_TO_CLOSE]:,.2f} |")
         buffer.write("\n")
         
-        # Price per sqft
-        buffer.write("| **Price/sqft** |")
-        for row in results:
-            price_per_sqft = row[K.PROPERTY_VALUE] / row[K.AREA] if row[K.AREA] > 0 else 0
-            buffer.write(f" ${price_per_sqft:,.2f} |")
+        # --- Affordability ---
+        buffer.write("| **Affordability** |")
+        buffer.write(" |" * len(results))
         buffer.write("\n")
-        
-        # Bedrooms/Bathrooms
-        buffer.write("| **Bed/Bath** |")
+
+        # Affordability Ratios
+        buffer.write("| GDS Ratio |")
         for row in results:
-            buffer.write(f" {row[K.BEDROOMS]}/{row[K.BATHROOMS]} |")
+            buffer.write(f" {format_rate(row[K.GDS_RATIO])}% |")
+        buffer.write("\n")
+
+        buffer.write("| TDS Ratio |")
+        for row in results:
+            buffer.write(f" {format_rate(row[K.TDS_RATIO])}% |")
         buffer.write("\n\n")
         
         # Rankings section
@@ -369,19 +478,11 @@ def generate_markdown_report(output_report_file: Path, results: list[MortgageRes
         # Best value (lowest price per sqft)
         sorted_by_value = sorted(
             enumerate(results, 1),
-            key=lambda x: x[1][K.PROPERTY_VALUE] / x[1][K.AREA] if x[1][K.AREA] > 0 else float('inf')
+            key=lambda x: x[1][K.PRICE_PER_SQFT] if x[1][K.PRICE_PER_SQFT] > 0 else float('inf')
         )
         buffer.write("**Best Value (Price/sqft):**\n")
         for rank, (idx, row) in enumerate(sorted_by_value, 1):
-            price_per_sqft = row[K.PROPERTY_VALUE] / row[K.AREA] if row[K.AREA] > 0 else 0
-            buffer.write(f"{rank}. [Property {idx}](#property-{idx}) - ${price_per_sqft:,.2f}/sqft\n")
-        buffer.write("\n")
-        
-        # Lowest % of salary
-        sorted_by_salary = sorted(enumerate(results, 1), key=lambda x: x[1][K.PERCENTAGE_OF_SALARY])
-        buffer.write("**Most Affordable (% of Salary):**\n")
-        for rank, (idx, row) in enumerate(sorted_by_salary, 1):
-            buffer.write(f"{rank}. [Property {idx}](#property-{idx}) - {row[K.PERCENTAGE_OF_SALARY]:.1f}%\n")
+            buffer.write(f"{rank}. [Property {idx}](#property-{idx}) - ${row[K.PRICE_PER_SQFT]:,.2f}/sqft\n")
         buffer.write("\n")
 
         buffer.write("---\n")

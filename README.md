@@ -87,6 +87,7 @@ loan_parameters:
   interest_rate: 3.5         # Annual interest rate (%)
   years_of_loan: 20          # Mortgage term in years
   monthly_salary: 2000       # Your monthly salary (for % calculation)
+  monthly_debt_payment: 0    # Your monthly debt payment
 necessary_expenses:
   notary_cost: 1000          # One-time notary fees
   inspection_cost: 200       # One-time inspection cost
@@ -100,7 +101,7 @@ properties:
 Define common values for a city/region:
 
 ```yaml
-home_insurance: 200           # Yearly home insurance
+yearly_home_insurance: 200           # Yearly home insurance
 property_tax: 0.4             # Property tax rate (%)
 school_tax: 0.1               # School tax rate (%)
 ```
@@ -138,19 +139,42 @@ The CSV file contains all calculated values for each property:
 |--------|-------------|
 | Description | Property description |
 | Address | Property address |
+| Link | URL for the property listing |
+| Bedrooms | Number of bedrooms |
+| Bathrooms | Number of bathrooms |
+| Area | Area in square feet |
+| Year_Built | Year the property was built |
 | Property_Value | Listed price |
 | Down_Payment | Your down payment |
-| Principal | Loan amount (value - down payment) |
-| Interest_Rate | Annual interest rate |
+| Loan_Amount | Loan amount (value - down payment) |
+| Interest_Rate | Annual interest rate (%) |
+| Years_of_Loan | Mortgage term in years |
 | Monthly_Mortgage_Payment | Monthly mortgage amount |
+| Monthly_Interest | Monthly interest portion (first month) |
+| Yearly_Interest | Yearly interest (first year estimate) |
+| Total_Interest | Total interest paid over the loan term |
 | Condo_Fees | Monthly condo fees |
-| Total_Monthly_Costs | Total monthly expenses |
-| Percentage_of_Salary | Monthly costs as % of salary |
-| Land_Transfer_Tax | Quebec land transfer tax |
+| Total_Monthly_Costs | Total monthly expenses (including amortized yearly costs) |
+| Land_Transfer_Tax_Rate | Land transfer tax rate (%) |
+| Land_Transfer_Tax | Quebec land transfer tax amount |
+| Notary_Cost | One-time notary fees |
+| Inspection_Cost | One-time inspection fees |
 | Total_One_Time_Costs | All one-time expenses |
+| Cash_to_Close | Down payment + all one-time costs |
+| Property_Tax_Rate | Property tax rate (%) |
 | Yearly_Property_Tax | Annual property tax |
+| Monthly_Property_Tax | Monthly amortized property tax |
+| School_Tax_Rate | School tax rate (%) |
 | Yearly_School_Tax | Annual school tax |
+| Monthly_School_Tax | Monthly amortized school tax |
+| Yearly_Home_Insurance | Annual home insurance cost |
+| Monthly_Home_Insurance | Monthly amortized home insurance |
 | Total_Yearly_Costs | All yearly expenses |
+| Price_Per_Sqft | Property value divided by area (sqft) |
+| Monthly Salary | Gross monthly salary |
+| Monthly debt payment | Total monthly debt payments |
+| GDS Ratio | Gross Debt Service (Total housing costs / gross monthly income) |
+| TDS Ratio | Total Debt Service ((Total housing costs + other debt payments) / gross monthly income) |
 
 ### Markdown Report
 
@@ -177,7 +201,7 @@ M = P * [r(1+r)^n] / [(1+r)^n - 1]
 
 Where:
   M = Monthly payment
-  P = Principal (property value - down payment)
+  P = Loan Amount (property value - down payment)
   r = Monthly interest rate (annual rate / 12 / 100)
   n = Total number of payments (years × 12)
 ```
@@ -198,7 +222,8 @@ Tax = Property Value × (Tax Rate / 100)
 mortgagecalculator_batch.py   # Entry point, Hydra integration
 ├── mortgagecalculatorlib.py  # Core calculation logic
 │   ├── CalculatedMortgage    # Main calculation class
-│   ├── validate_property_config()
+│   ├── validate_loan_config()        # Validates loan & expenses (once)
+│   ├── get_property_config_errors()  # Validates per-property fields
 │   └── calculate_*() functions
 ├── reportinglib.py           # Report generation
 │   ├── create_bar_chart()    # Generic chart generator
@@ -235,15 +260,24 @@ python mortgagecalculator_batch.py -cd example_settings -cn property_list
 
 ## Error Handling
 
-The calculator validates all configuration values:
+The calculator validates all configuration values upfront before processing any properties:
 
-- Property value must be positive
+**Loan & expense validation** (performed once):
 - Interest rate must be 0-100%
-- Down payment must be less than property value
-- All costs and fees must be non-negative
+- Loan term must be positive
+- Down payment must be non-negative
 - Monthly salary must be positive
+- Monthly debt payment must be non-negative
+- Notary and inspection costs must be non-negative
 
-Invalid configurations raise `ValidationError` with detailed messages.
+**Per-property validation** (performed for each property):
+- Property value must be positive
+- Property tax and school tax rates must be non-negative
+- Condo fees and home insurance must be non-negative
+- Area (sqft) must be positive
+- Down payment must be less than property value
+
+Invalid configurations raise `ValidationError` with detailed messages listing all errors found.
 
 ## Dependencies
 

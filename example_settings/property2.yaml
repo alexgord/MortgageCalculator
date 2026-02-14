@@ -2,7 +2,7 @@ defaults:
   - city_details
   - _self_
 description: Property 2 Description
-address: "4321 Sesame Stree, New York, NY 10001"
+address: "4321 Sesame Street, New York, NY 10001"
 value: 300000
 condo_fees: 200
 link: https://www.sesamestreet.com/realestate/property2

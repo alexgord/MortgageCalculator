@@ -14,9 +14,10 @@ chart:
   dpi: 150
 loan_parameters:
   down_payment: 30000
-  interest_rate: 3.5
+  interest_rate: 3.57
   years_of_loan: 20
   monthly_salary: 2000
+  monthly_debt_payment: 0
 necessary_expenses:
   notary_cost: 1000
   inspection_cost: 200

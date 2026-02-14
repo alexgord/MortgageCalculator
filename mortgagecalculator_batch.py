@@ -5,7 +5,7 @@ from pathlib import Path
 from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
 from config_dataclasses import PropertiesListConfig
-from mortgagecalculatorlib import calculate_mortgage_from_settings, ValidationError
+from mortgagecalculatorlib import calculate_mortgage_from_settings, validate_loan_config_and_properties, ValidationError
 from reportinglib import generate_markdown_report, ReportGenerationError
 from custom_types import MortgageResult
 
@@ -27,14 +27,17 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
     output_report_file= Path(cfg.output_dir) / cfg.output_report
     output_report_file.parent.mkdir(parents=True, exist_ok=True)
     
+    # Validate loan configuration once before processing properties
+    validate_loan_config_and_properties(cfg)
+    
     print(f"Processing {len(cfg.properties)} properties...")
     
     # Calculate mortgages for all properties
     results: list[MortgageResult] = []
     for i, prop in enumerate(cfg.properties, 1):
         try:
-            calculated = calculate_mortgage_from_settings(prop, cfg)
-            results.append(calculated.to_result())
+            result = calculate_mortgage_from_settings(prop, cfg)
+            results.append(result)
         except ValidationError as e:
             logger.error(f"Property {i} validation failed: {e}")
             raise
