@@ -90,6 +90,15 @@ def get_property_config_errors(property_cfg: PropertyConfig, loan_cfg: Propertie
                 errors.append(f"Land transfer tax bracket {i} rate cannot be negative, got {bracket.rate}")
             if bracket.threshold < 0:
                 errors.append(f"Land transfer tax bracket {i} threshold cannot be negative, got {bracket.threshold}")
+            # Ensure brackets are ordered from highest threshold to lowest
+            if i > 0:
+                prev_bracket = property_cfg.land_transfer_tax_brackets[i - 1]
+                if prev_bracket.threshold <= bracket.threshold:
+                    errors.append(
+                        "Land transfer tax brackets must be ordered from highest threshold to lowest; "
+                        f"bracket {i-1} threshold ({prev_bracket.threshold}) must be greater than "
+                        f"bracket {i} threshold ({bracket.threshold})"
+                    )
 
     # Cross-field validation
     if loan_cfg.loan_parameters.down_payment >= property_cfg.value:
