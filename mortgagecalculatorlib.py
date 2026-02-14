@@ -185,7 +185,9 @@ class CalculatedMortgage:
         monthly_costs = [
             self.mortgage_payment,
             property_details.condo_fees,
-            self.total_yearly_costs / MONTHS_IN_YEAR,
+            self.monthly_property_tax,
+            self.monthly_school_tax,
+            self.monthly_home_insurance,
         ]
         self.total_monthly_costs = round(sum(monthly_costs), 2)
         affordability_monthly_costs = self.total_monthly_costs + cfg.loan_parameters.monthly_debt_payment

@@ -35,12 +35,8 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
     # Calculate mortgages for all properties
     results: list[MortgageResult] = []
     for i, prop in enumerate(cfg.properties, 1):
-        try:
-            result = calculate_mortgage_from_settings(prop, cfg)
-            results.append(result)
-        except ValidationError as e:
-            logger.error(f"Property {i} validation failed: {e}")
-            raise
+        result = calculate_mortgage_from_settings(prop, cfg)
+        results.append(result)
     
     # Create DataFrame and write to CSV
     df = pd.DataFrame(results)

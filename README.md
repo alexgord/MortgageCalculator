@@ -171,11 +171,10 @@ The CSV file contains all calculated values for each property:
 | Monthly_Home_Insurance | Monthly amortized home insurance |
 | Total_Yearly_Costs | All yearly expenses |
 | Price_Per_Sqft | Property value divided by area (sqft) |
-| Monthly Salary | Gross monthly salary |
-| Monthly debt payment | Total monthly debt payments |
-| GDS Ratio | Gross Debt Service (Total housing costs / gross monthly income) |
-| TDS Ratio | Total Debt Service ((Total housing costs + other debt payments) / gross monthly income) |
-
+| Monthly_Salary | Gross monthly salary |
+| Monthly_Debt_Payment | Total monthly debt payments |
+| GDS_Ratio | Gross Debt Service (Total housing costs / gross monthly income) |
+| TDS_Ratio | Total Debt Service ((Total housing costs + other debt payments) / gross monthly income) |
 ### Markdown Report
 
 The report includes:
@@ -222,7 +221,7 @@ Tax = Property Value × (Tax Rate / 100)
 mortgagecalculator_batch.py   # Entry point, Hydra integration
 ├── mortgagecalculatorlib.py  # Core calculation logic
 │   ├── CalculatedMortgage    # Main calculation class
-│   ├── validate_loan_config()        # Validates loan & expenses (once)
+│   ├── validate_loan_config_and_properties()  # Validates loan & expenses (once)
 │   ├── get_property_config_errors()  # Validates per-property fields
 │   └── calculate_*() functions
 ├── reportinglib.py           # Report generation
