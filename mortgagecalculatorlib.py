@@ -1,25 +1,63 @@
-from pathlib import Path
 from config_dataclasses import PropertiesListConfig, PropertyConfig
 from custom_types import MortgageResult
 
 MONTHS_IN_YEAR = 12
-
 
 class ValidationError(Exception):
     """Raised when configuration validation fails."""
     pass
 
 
-def validate_property_config(property_cfg: PropertyConfig, loan_cfg: PropertiesListConfig) -> None:
+def validate_loan_config_and_properties(loan_cfg: PropertiesListConfig) -> None:
     """
-    Validate property and loan configuration values.
+    Validate loan and expense configuration values (call once before processing properties).
     
     Args:
-        property_cfg: Property configuration to validate
         loan_cfg: Loan configuration to validate
         
     Raises:
         ValidationError: If any configuration value is invalid
+    """
+    errors = []
+    
+    # Loan parameter validation
+    if loan_cfg.loan_parameters.interest_rate < 0 or loan_cfg.loan_parameters.interest_rate > 100:
+        errors.append(f"Interest rate must be between 0 and 100%, got {loan_cfg.loan_parameters.interest_rate}")
+    if loan_cfg.loan_parameters.years_of_loan <= 0:
+        errors.append(f"Loan term must be positive, got {loan_cfg.loan_parameters.years_of_loan}")
+    if loan_cfg.loan_parameters.down_payment < 0:
+        errors.append(f"Down payment cannot be negative, got {loan_cfg.loan_parameters.down_payment}")
+    if loan_cfg.loan_parameters.monthly_salary <= 0:
+        errors.append(f"Monthly salary must be positive, got {loan_cfg.loan_parameters.monthly_salary}")
+    if loan_cfg.loan_parameters.monthly_debt_payment < 0:
+        errors.append(
+            "Monthly debt payment cannot be negative, got "
+            f"{loan_cfg.loan_parameters.monthly_debt_payment}"
+        )
+    
+    # Expense validation
+    if loan_cfg.necessary_expenses.notary_cost < 0:
+        errors.append(f"Notary cost cannot be negative, got {loan_cfg.necessary_expenses.notary_cost}")
+    if loan_cfg.necessary_expenses.inspection_cost < 0:
+        errors.append(f"Inspection cost cannot be negative, got {loan_cfg.necessary_expenses.inspection_cost}")
+
+    for property in loan_cfg.properties:
+        errors.extend(get_property_config_errors(property, loan_cfg))
+    
+    if errors:
+        raise ValidationError("Loan configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+
+
+def get_property_config_errors(property_cfg: PropertyConfig, loan_cfg: PropertiesListConfig) -> list[str]:
+    """
+    Validate property-specific configuration values.
+    
+    Args:
+        property_cfg: Property configuration to validate
+        loan_cfg: Loan configuration (used for cross-field checks like down payment vs value)
+        
+    Returns:
+        List of validation error messages, empty if no errors
     """
     errors = []
     
@@ -36,29 +74,18 @@ def validate_property_config(property_cfg: PropertyConfig, loan_cfg: PropertiesL
     # Fee and cost validation
     if property_cfg.condo_fees < 0:
         errors.append(f"Condo fees cannot be negative, got {property_cfg.condo_fees}")
-    if property_cfg.home_insurance < 0:
-        errors.append(f"Home insurance cannot be negative, got {property_cfg.home_insurance}")
+    if property_cfg.yearly_home_insurance < 0:
+        errors.append(f"Home insurance cannot be negative, got {property_cfg.yearly_home_insurance}")
     
-    # Loan parameter validation
-    if loan_cfg.loan_parameters.interest_rate < 0 or loan_cfg.loan_parameters.interest_rate > 100:
-        errors.append(f"Interest rate must be between 0 and 100%, got {loan_cfg.loan_parameters.interest_rate}")
-    if loan_cfg.loan_parameters.years_of_loan <= 0:
-        errors.append(f"Loan term must be positive, got {loan_cfg.loan_parameters.years_of_loan}")
-    if loan_cfg.loan_parameters.down_payment < 0:
-        errors.append(f"Down payment cannot be negative, got {loan_cfg.loan_parameters.down_payment}")
+
+    if property_cfg.area_sqft <= 0:
+        errors.append(f"Area (sqft) must be positive, got {property_cfg.area_sqft}")
+
+    # Cross-field validation
     if loan_cfg.loan_parameters.down_payment >= property_cfg.value:
         errors.append(f"Down payment ({loan_cfg.loan_parameters.down_payment}) cannot be >= property value ({property_cfg.value})")
-    if loan_cfg.loan_parameters.monthly_salary <= 0:
-        errors.append(f"Monthly salary must be positive, got {loan_cfg.loan_parameters.monthly_salary}")
     
-    # Expense validation
-    if loan_cfg.necessary_expenses.notary_cost < 0:
-        errors.append(f"Notary cost cannot be negative, got {loan_cfg.necessary_expenses.notary_cost}")
-    if loan_cfg.necessary_expenses.inspection_cost < 0:
-        errors.append(f"Inspection cost cannot be negative, got {loan_cfg.necessary_expenses.inspection_cost}")
-    
-    if errors:
-        raise ValidationError("Configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+    return errors
 
 
 def percent_to_decimal(percentage: float) -> float:
@@ -96,7 +123,7 @@ def calculate_monthly_interest_rate(yearly_rate_decimal: float) -> float:
     return yearly_rate_decimal / MONTHS_IN_YEAR
 
 
-def calculate_mortgage_payment(yearly_rate_decimal: float, years: int, principal: float) -> float:
+def calculate_mortgage_payment(yearly_rate_decimal: float, years: int, loan_amount: float) -> float:
     """
     Calculate monthly mortgage payment.
     
@@ -105,102 +132,120 @@ def calculate_mortgage_payment(yearly_rate_decimal: float, years: int, principal
     Args:
         yearly_rate_decimal: Yearly interest rate as decimal (e.g., 0.05 for 5%)
         years: Number of years of mortgage
-        principal: Principal amount of mortgage
+        loan_amount: Loan amount of mortgage
         
     Returns:
         Monthly mortgage payment amount
     """
+
+    #Edge case for 0% interest
+    if yearly_rate_decimal == 0:
+        return loan_amount / (years * MONTHS_IN_YEAR)
+    
     monthly_rate = calculate_monthly_interest_rate(yearly_rate_decimal)
     months = years * MONTHS_IN_YEAR
-    return (principal * monthly_rate * pow(1 + monthly_rate, months)) / (pow(1 + monthly_rate, months) - 1)
+    return (loan_amount * monthly_rate * pow(1 + monthly_rate, months)) / (pow(1 + monthly_rate, months) - 1)
 
 
 def calculate_yearly_tax(value: float, rate_decimal: float) -> float:
     """Calculate yearly tax based on property value and tax rate (as decimal)."""
     return value * rate_decimal
 
-
-def calculate_max_principal(yearly_rate_decimal: float, years: int, monthly_housing: float) -> float:
-    """
-    Calculate maximum principal based on monthly housing budget.
-    
-    Based on the formula found on https://en.wikipedia.org/wiki/Mortgage_calculator
-    
-    Args:
-        yearly_rate_decimal: Yearly interest rate as decimal (e.g., 0.05 for 5%)
-        years: Number of years of mortgage
-        monthly_housing: Monthly amount available for housing costs
-        
-    Returns:
-        Maximum principal that can be afforded
-    """
-    monthly_rate = calculate_monthly_interest_rate(yearly_rate_decimal)
-    months = years * MONTHS_IN_YEAR
-    return (monthly_housing * (pow(1 + monthly_rate, months) - 1)) / (monthly_rate * pow(1 + monthly_rate, months))
-
-
 class CalculatedMortgage:
     def __init__(self, property_details: PropertyConfig, cfg: PropertiesListConfig):
-        self.cfg = cfg
-        self.property_details = property_details
-        
         # Convert percentages to decimals at the boundary
         interest_rate_decimal = percent_to_decimal(cfg.loan_parameters.interest_rate)
         property_tax_decimal = percent_to_decimal(property_details.property_tax)
         school_tax_decimal = percent_to_decimal(property_details.school_tax)
+
+        area_sqft = float(property_details.area_sqft or 0)
         
-        #Calculate all mortgage related values
-        self.land_transfer_tax_rate = round(land_transfer_tax_rate_decimal(property_details.value), 4)
+        # Calculate all mortgage related values
+        self.land_transfer_tax_rate = round(land_transfer_tax_rate_decimal(property_details.value), 7)
         self.land_transfer_tax = round(calculate_land_transfer_tax(property_details.value), 2)
         one_time_costs = [cfg.necessary_expenses.notary_cost, cfg.necessary_expenses.inspection_cost, self.land_transfer_tax]
         self.all_one_time_costs = round(sum(one_time_costs), 2)
+        self.cash_to_close = round(cfg.loan_parameters.down_payment + self.all_one_time_costs, 2)
         self.yearly_property_tax = round(calculate_yearly_tax(property_details.value, property_tax_decimal), 2)
+        self.monthly_property_tax = round(self.yearly_property_tax / MONTHS_IN_YEAR, 2)
         self.yearly_school_tax = round(calculate_yearly_tax(property_details.value, school_tax_decimal), 2)
-        yearly_costs = [self.yearly_property_tax, self.yearly_school_tax, property_details.home_insurance]
+        self.monthly_school_tax = round(self.yearly_school_tax / MONTHS_IN_YEAR, 2)
+        yearly_home_insurance = round(property_details.yearly_home_insurance, 2)
+        self.monthly_home_insurance = round(yearly_home_insurance / MONTHS_IN_YEAR, 2)
+        yearly_costs = [self.yearly_property_tax, self.yearly_school_tax, yearly_home_insurance]
         self.total_yearly_costs = round(sum(yearly_costs), 2)
-        self.principal = round(property_details.value - cfg.loan_parameters.down_payment, 2)
-        self.mortgage_payment = round(calculate_mortgage_payment(interest_rate_decimal, cfg.loan_parameters.years_of_loan, self.principal), 2)
-        monthly_costs = [self.mortgage_payment, property_details.condo_fees]
+        self.loan_amount = round(property_details.value - cfg.loan_parameters.down_payment, 2)
+        self.mortgage_payment = round(calculate_mortgage_payment(interest_rate_decimal, cfg.loan_parameters.years_of_loan, self.loan_amount), 2)
+        monthly_interest_rate = calculate_monthly_interest_rate(interest_rate_decimal)
+        self.monthly_interest = round(self.loan_amount * monthly_interest_rate, 2)
+        self.yearly_interest = round(self.monthly_interest * MONTHS_IN_YEAR, 2)
+        total_payments = self.mortgage_payment * (cfg.loan_parameters.years_of_loan * MONTHS_IN_YEAR)
+        self.total_interest = round(total_payments - self.loan_amount, 2)
+        self.price_per_sqft = round(property_details.value / area_sqft, 2) if area_sqft > 0 else 0.0
+        monthly_costs = [
+            self.mortgage_payment,
+            property_details.condo_fees,
+            self.monthly_property_tax,
+            self.monthly_school_tax,
+            self.monthly_home_insurance,
+        ]
         self.total_monthly_costs = round(sum(monthly_costs), 2)
-        self.percentage_of_salary = round(self.total_monthly_costs / cfg.loan_parameters.monthly_salary, 2)
+        affordability_monthly_costs = self.total_monthly_costs + cfg.loan_parameters.monthly_debt_payment
+        self.gds_ratio = round(self.total_monthly_costs / cfg.loan_parameters.monthly_salary * 100, 2) if cfg.loan_parameters.monthly_salary > 0 else 0.0
+        self.tds_ratio = round(affordability_monthly_costs / cfg.loan_parameters.monthly_salary * 100, 2) if cfg.loan_parameters.monthly_salary > 0 else 0.0
 
-    def to_result(self) -> MortgageResult:
+    def to_result(self, property_details: PropertyConfig, cfg: PropertiesListConfig) -> MortgageResult:
         """Convert the calculated mortgage to a MortgageResult for reporting.
         
+        Args:
+            property_details: Property configuration used for this mortgage.
+            cfg: Overall calculation configuration including loan parameters.
+
         Returns:
             A flattened MortgageResult dictionary suitable for CSV export and reports.
         """
         return MortgageResult(
-            Description=self.property_details.description or "",
-            Address=self.property_details.address or "",
-            Link=self.property_details.link or "",
-            Bedrooms=self.property_details.bedrooms or "",
-            Bathrooms=self.property_details.bathrooms or "",
-            Area=self.property_details.area_sqft or "",
-            Year_Built=self.property_details.year_built or "",
-            Property_Value=self.property_details.value,
-            Down_Payment=self.cfg.loan_parameters.down_payment,
-            Principal=self.principal,
-            Interest_Rate=self.cfg.loan_parameters.interest_rate,
-            Years_of_Loan=self.cfg.loan_parameters.years_of_loan,
+            Description=property_details.description or "",
+            Address=property_details.address or "",
+            Link=property_details.link or "",
+            Bedrooms=property_details.bedrooms or "",
+            Bathrooms=property_details.bathrooms or "",
+            Area=property_details.area_sqft or "",
+            Year_Built=property_details.year_built or "",
+            Property_Value=property_details.value,
+            Down_Payment=cfg.loan_parameters.down_payment,
+            Loan_Amount=self.loan_amount,
+            Interest_Rate=cfg.loan_parameters.interest_rate,
+            Years_of_Loan=cfg.loan_parameters.years_of_loan,
             Monthly_Mortgage_Payment=self.mortgage_payment,
-            Condo_Fees=self.property_details.condo_fees,
+            Monthly_Interest=self.monthly_interest,
+            Yearly_Interest=self.yearly_interest,
+            Total_Interest=self.total_interest,
+            Condo_Fees=property_details.condo_fees,
             Total_Monthly_Costs=self.total_monthly_costs,
-            Percentage_of_Salary=self.percentage_of_salary * 100,
             Land_Transfer_Tax_Rate=self.land_transfer_tax_rate * 100,
             Land_Transfer_Tax=self.land_transfer_tax,
-            Notary_Cost=self.cfg.necessary_expenses.notary_cost,
-            Inspection_Cost=self.cfg.necessary_expenses.inspection_cost,
+            Notary_Cost=cfg.necessary_expenses.notary_cost,
+            Inspection_Cost=cfg.necessary_expenses.inspection_cost,
             Total_One_Time_Costs=self.all_one_time_costs,
-            Property_Tax_Rate=self.property_details.property_tax,
+            Cash_to_Close=self.cash_to_close,
+            Property_Tax_Rate=property_details.property_tax,
             Yearly_Property_Tax=self.yearly_property_tax,
-            School_Tax_Rate=self.property_details.school_tax,
+            Monthly_Property_Tax=self.monthly_property_tax,
+            School_Tax_Rate=property_details.school_tax,
             Yearly_School_Tax=self.yearly_school_tax,
-            Home_Insurance=self.property_details.home_insurance,
+            Monthly_School_Tax=self.monthly_school_tax,
+            Yearly_Home_Insurance=property_details.yearly_home_insurance,
+            Monthly_Home_Insurance=self.monthly_home_insurance,
             Total_Yearly_Costs=self.total_yearly_costs,
+            Price_Per_Sqft=self.price_per_sqft,
+            Monthly_Salary=cfg.loan_parameters.monthly_salary,
+            Monthly_Debt_Payment=cfg.loan_parameters.monthly_debt_payment,
+            GDS_Ratio=self.gds_ratio,
+            TDS_Ratio=self.tds_ratio,
         )
 
-def calculate_mortgage_from_settings(config: PropertyConfig, cfg: PropertiesListConfig) -> CalculatedMortgage:
+def calculate_mortgage_from_settings(config: PropertyConfig, cfg: PropertiesListConfig) -> MortgageResult:
     """Calculate mortgage details from property and loan settings.
     
     Args:
@@ -208,27 +253,7 @@ def calculate_mortgage_from_settings(config: PropertyConfig, cfg: PropertiesList
         cfg: Overall calculation configuration including loan parameters
         
     Returns:
-        CalculatedMortgage object with all computed values
-        
-    Raises:
-        ValidationError: If configuration values are invalid
+        A flattened MortgageResult dictionary suitable for CSV export and reports.
     """
-    validate_property_config(config, cfg)
-    return CalculatedMortgage(config, cfg)
-
-
-def calculate_max_mortgage_from_settings(config: PropertyConfig, cfg: PropertiesListConfig) -> CalculatedMortgage:
-    """Calculate maximum mortgage from property and loan settings.
-    
-    Args:
-        config: Property configuration
-        cfg: Overall calculation configuration including loan parameters
-        
-    Returns:
-        CalculatedMortgage object with all computed values
-        
-    Raises:
-        ValidationError: If configuration values are invalid
-    """
-    validate_property_config(config, cfg)
-    return CalculatedMortgage(config, cfg)
+    calculated = CalculatedMortgage(config, cfg)
+    return calculated.to_result(config, cfg)

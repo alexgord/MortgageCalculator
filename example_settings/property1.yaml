@@ -2,7 +2,7 @@ defaults:
   - city_details
   - _self_
 description: Property 1 Description
-address: "1234 Sesame Stree, New York, NY 10001"
+address: "1234 Sesame Street, New York, NY 10001"
 value: 200000
 condo_fees: 200
 link: https://www.sesamestreet.com/realestate/property1
