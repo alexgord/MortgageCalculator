@@ -1,0 +1,7 @@
+land_transfer_tax_brackets:
+  - threshold: 250000
+    rate: 1.5
+  - threshold: 5000
+    rate: 1.0
+  - threshold: 0
+    rate: 0.5

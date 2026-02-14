@@ -1,4 +1,4 @@
-from config_dataclasses import PropertiesListConfig, PropertyConfig
+from config_dataclasses import LandTransferTaxBracket, PropertiesListConfig, PropertyConfig
 from custom_types import MortgageResult
 
 MONTHS_IN_YEAR = 12
@@ -81,6 +81,16 @@ def get_property_config_errors(property_cfg: PropertyConfig, loan_cfg: Propertie
     if property_cfg.area_sqft <= 0:
         errors.append(f"Area (sqft) must be positive, got {property_cfg.area_sqft}")
 
+    # Land transfer tax bracket validation
+    if not property_cfg.land_transfer_tax_brackets:
+        errors.append("Land transfer tax brackets must be configured (land_transfer_tax_brackets is empty)")
+    else:
+        for i, bracket in enumerate(property_cfg.land_transfer_tax_brackets):
+            if bracket.rate < 0:
+                errors.append(f"Land transfer tax bracket {i} rate cannot be negative, got {bracket.rate}")
+            if bracket.threshold < 0:
+                errors.append(f"Land transfer tax bracket {i} threshold cannot be negative, got {bracket.threshold}")
+
     # Cross-field validation
     if loan_cfg.loan_parameters.down_payment >= property_cfg.value:
         errors.append(f"Down payment ({loan_cfg.loan_parameters.down_payment}) cannot be >= property value ({property_cfg.value})")
@@ -93,29 +103,36 @@ def percent_to_decimal(percentage: float) -> float:
     return percentage / 100
 
 
-def land_transfer_tax_rate_decimal(value: float) -> float:
+def land_transfer_tax_rate_decimal(value: float, brackets: list[LandTransferTaxBracket]) -> float:
     """
-    Calculate land transfer tax rate based on property value.
+    Calculate land transfer tax rate based on property value and configured brackets.
     
-    Based on values found on https://www.nesto.ca/calculators/land-transfer-tax/quebec/
+    Brackets should be ordered from highest threshold to lowest.
     
     Args:
         value: Property value in dollars
+        brackets: List of tax brackets (threshold/rate pairs, rate as percentage)
         
     Returns:
         Tax rate as decimal (e.g., 0.015 for 1.5%)
+        
+    Raises:
+        ValueError: If no brackets are configured
     """
-    if value > 276200:
-        return 0.015
-    elif value > 5520:
-        return 0.01
-    else:
-        return 0.005
+    if not brackets:
+        raise ValueError("No land transfer tax brackets configured")
+    
+    for bracket in brackets:
+        if value > bracket.threshold:
+            return percent_to_decimal(bracket.rate)
+    
+    # Fall through to the last bracket's rate
+    return percent_to_decimal(brackets[-1].rate)
 
 
-def calculate_land_transfer_tax(value: float) -> float:
+def calculate_land_transfer_tax(value: float, brackets: list[LandTransferTaxBracket]) -> float:
     """Calculate the land transfer tax amount for a property."""
-    return value * land_transfer_tax_rate_decimal(value)
+    return value * land_transfer_tax_rate_decimal(value, brackets)
 
 
 def calculate_monthly_interest_rate(yearly_rate_decimal: float) -> float:
@@ -161,8 +178,9 @@ class CalculatedMortgage:
         area_sqft = float(property_details.area_sqft or 0)
         
         # Calculate all mortgage related values
-        self.land_transfer_tax_rate = round(land_transfer_tax_rate_decimal(property_details.value), 7)
-        self.land_transfer_tax = round(calculate_land_transfer_tax(property_details.value), 2)
+        brackets = property_details.land_transfer_tax_brackets
+        self.land_transfer_tax_rate = round(land_transfer_tax_rate_decimal(property_details.value, brackets), 7)
+        self.land_transfer_tax = round(calculate_land_transfer_tax(property_details.value, brackets), 2)
         one_time_costs = [cfg.necessary_expenses.notary_cost, cfg.necessary_expenses.inspection_cost, self.land_transfer_tax]
         self.all_one_time_costs = round(sum(one_time_costs), 2)
         self.cash_to_close = round(cfg.loan_parameters.down_payment + self.all_one_time_costs, 2)
