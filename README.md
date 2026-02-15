@@ -5,7 +5,7 @@ A Python-based mortgage calculator that analyzes multiple properties and generat
 ## Features
 
 - **Multi-property analysis** - Compare multiple properties side-by-side
-- **Composable configuration** - Define city-level defaults, reuse across properties
+- **Composable configuration** - Define city-level and province-level defaults, reuse across properties
 - **Comprehensive cost breakdown**:
   - Monthly costs (mortgage payment, condo fees)
   - Yearly costs (property tax, school tax, home insurance)
@@ -59,7 +59,8 @@ This will:
 
 ```
 example_settings/
-├── city_details.yaml         # City-level defaults (taxes, insurance)
+├── province_details.yaml     # Province-level defaults (Land transfer tax)
+├── city_details.yaml         # City-level defaults (Property taxes, home insurance)
 ├── property1.yaml            # Example property
 ├── property2.yaml            # Example property
 └── property_list.yaml        # Example main config
@@ -96,12 +97,26 @@ properties:
   - ${property2}
 ```
 
+### Example Province Defaults (`province_details.yaml`)
+
+Define common values for a province/state:
+
+```yaml
+land_transfer_tax_brackets:    # Tax brackets for land transfer taxes (In decreasing order)
+  - threshold: 250000          # Tax bracket lower bound (Properties above this value are taxed at this rate)
+    rate: 1.5                  # Tax bracket rate
+  - threshold: 5000
+    rate: 1.0
+  - threshold: 0
+    rate: 0.5
+```
+
 ### Example City Defaults (`city_details.yaml`)
 
 Define common values for a city/region:
 
 ```yaml
-yearly_home_insurance: 200           # Yearly home insurance
+yearly_home_insurance: 200    # Yearly home insurance
 property_tax: 0.4             # Property tax rate (%)
 school_tax: 0.1               # School tax rate (%)
 ```
@@ -156,7 +171,7 @@ The CSV file contains all calculated values for each property:
 | Condo_Fees | Monthly condo fees |
 | Total_Monthly_Costs | Total monthly expenses (including amortized yearly costs) |
 | Land_Transfer_Tax_Rate | Land transfer tax rate (%) |
-| Land_Transfer_Tax | Quebec land transfer tax amount |
+| Land_Transfer_Tax | Land transfer tax amount |
 | Notary_Cost | One-time notary fees |
 | Inspection_Cost | One-time inspection fees |
 | Total_One_Time_Costs | All one-time expenses |

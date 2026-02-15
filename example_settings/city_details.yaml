@@ -1,3 +1,6 @@
+defaults:
+  - province_details
+  - _self_
 yearly_home_insurance: 200
 property_tax: 0.4
 school_tax: 0.1

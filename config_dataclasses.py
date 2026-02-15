@@ -1,5 +1,16 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List
+
+
+@dataclass
+class LandTransferTaxBracket:
+    """A single bracket for land transfer tax calculation.
+    
+    Properties with value above `threshold` are taxed at `rate` (percentage).
+    Brackets should be ordered from highest threshold to lowest.
+    """
+    threshold: float
+    rate: float
 
 
 @dataclass
@@ -26,6 +37,9 @@ class PropertyConfig:
     yearly_home_insurance: float
     notary_cost: float
     inspection_cost: float
+    
+    # Land transfer tax brackets (ordered highest threshold first)
+    land_transfer_tax_brackets: List[LandTransferTaxBracket] = field(default_factory=list)
     
     # Optional metadata
     description: Optional[str] = None
