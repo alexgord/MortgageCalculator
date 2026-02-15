@@ -73,7 +73,7 @@ defaults:
   - property1@property1       # Include property1.yaml as ${property1}
   - property2@property2       # Include property2.yaml as ${property2}
   - _self_
-output_dir: properties_output
+output_dir: example_properties_output
 output_data_format: csv
 output_data: properties_summary.${output_data_format}
 output_report_format: md
@@ -85,7 +85,7 @@ chart:
   dpi: 150                    # Image resolution
 loan_parameters:
   down_payment: 30000        # Your down payment amount
-  interest_rate: 3.5         # Annual interest rate (%)
+  interest_rate: 3.57        # Annual interest rate (%)
   years_of_loan: 20          # Mortgage term in years
   monthly_salary: 2000       # Your monthly salary (for % calculation)
   monthly_debt_payment: 0    # Your monthly debt payment
@@ -113,9 +113,12 @@ land_transfer_tax_brackets:    # Tax brackets for land transfer taxes (In decrea
 
 ### Example City Defaults (`city_details.yaml`)
 
-Define common values for a city/region:
+Define common values for a city/region. Inherits province-level defaults (land transfer tax brackets):
 
 ```yaml
+defaults:
+  - province_details            # Inherit province defaults
+  - _self_
 yearly_home_insurance: 200    # Yearly home insurance
 property_tax: 0.4             # Property tax rate (%)
 school_tax: 0.1               # School tax rate (%)
@@ -128,17 +131,17 @@ defaults:
   - city_details                        # Inherit city defaults
   - _self_
 
-description: "Cozy 2BR condo"
-address: "1234 Sesame Stree, New York, NY 10001"
+description: "Property 1 Description"
+address: "1234 Sesame Street, New York, NY 10001"
 value: 200000                           # Property price
 condo_fees: 200                         # Monthly condo fees
-link: https://example.com/listing       # The URL for the listing
+link: https://www.sesamestreet.com/realestate/property1
 
 # Optional metadata
 bedrooms: 2
 bathrooms: 1
 area_sqft: 1000
-year_built: 2005
+year_built: 2000
 
 # Override city defaults if needed
 # property_tax: 0.5
