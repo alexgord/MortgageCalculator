@@ -34,6 +34,8 @@ class ChartService:
         xlabel: str | None = 'Property',
         fmt: str = '$%.0f',
         label_fontsize: int | None = None,
+        compact_labels: bool = False,
+        ymin_padding: float | None = None,
     ) -> None:
         """
         Generic bar chart generator to reduce duplication across chart functions.
@@ -49,7 +51,20 @@ class ChartService:
             xlabel: X-axis label (None to omit)
             fmt: Format string for bar labels
             label_fontsize: Font size for bar labels (None for default)
+            compact_labels: Use compact currency labels (e.g. $625k, $1.2M) If True, overrides fmt
+            ymin_padding: Fraction below the lowest value to set as the y-axis minimum
+                          (e.g. 0.10 = 10% below min value). None (default) starts the
+                          axis at 0, matching the standard matplotlib bar chart behavior.
         """
+        if values is None or len(values) == 0 or labels is None or len(labels) == 0:
+            raise cls.ChartGenerationError("Labels and values must be non-empty lists.")
+        
+        if any(v < 0 for v in values):
+            raise cls.ChartGenerationError("Negative values are not supported for bar charts.")
+        
+        if len(labels) != len(values):
+            raise cls.ChartGenerationError("Labels and values lists must be of the same length.")
+
         figure_size = (cfg.chart.width, cfg.chart.height)
         fig, ax = plt.subplots(figsize=figure_size)
         
@@ -63,14 +78,20 @@ class ChartService:
         for tick in ax.get_xticklabels():
             tick.set_ha('right')
         
-        bar_label_kwargs = {'fmt': fmt, 'padding': 3}
+        bar_label_kwargs = {'padding': 3}
         if label_fontsize is not None:
             bar_label_kwargs['fontsize'] = label_fontsize
+        if compact_labels:
+            bar_label_kwargs['labels'] = [cls._format_compact_currency(value) for value in values]
+        else:
+            bar_label_kwargs['fmt'] = fmt
+            
         ax.bar_label(bars, **bar_label_kwargs)
         
         plt.tight_layout()
-        ymin, ymax = ax.get_ylim()
-        ax.set_ylim(ymin, ymax * (1 + cfg.chart.top_padding))
+        ymin = 0 if ymin_padding is None else min(values) * (1 - ymin_padding)
+        ymax = max(values) + (max(values) - ymin) * cfg.chart.top_padding
+        ax.set_ylim(ymin, ymax)
         
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,6 +108,16 @@ class ChartService:
         return [cls.PROPERTY_COLORS[i % len(cls.PROPERTY_COLORS)] for i in range(n)]
 
     @classmethod
+    def _format_compact_currency(cls, value: float) -> str:
+        """Format currency with compact suffixes to reduce label overlap."""
+        abs_value = abs(value)
+        if abs_value >= 1_000_000:
+            return f'${value / 1_000_000:.1f}M'
+        if abs_value >= 1_000:
+            return f'${value / 1_000:.0f}k'
+        return f'${value:.0f}'
+
+    @classmethod
     def generate_monthly_report_chart(cls, results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate monthly costs comparison chart."""
         monthly_costs = [row[K.TOTAL_MONTHLY_COSTS] for row in results]
@@ -98,6 +129,7 @@ class ChartService:
             title='Total Monthly Costs by Property',
             ylabel='Total Monthly Cost ($)',
             colors=cls._cycle_colors(len(results)),
+            ymin_padding=0.10,
         )
 
     @classmethod
@@ -113,6 +145,7 @@ class ChartService:
             ylabel='Amount ($)',
             colors=cls._cycle_colors(len(results)),
             label_fontsize=8,
+            ymin_padding=0.10,
         )
 
     @classmethod
@@ -127,6 +160,9 @@ class ChartService:
             title='Property Values by Property',
             ylabel='Property Value ($)',
             colors=cls._cycle_colors(len(results)),
+            label_fontsize=8,
+            compact_labels=True,
+            ymin_padding=0.10,
         )
 
     @classmethod
@@ -142,6 +178,7 @@ class ChartService:
             ylabel='Amount ($)',
             colors=cls._cycle_colors(len(results)),
             label_fontsize=8,
+            ymin_padding=0.10,
         )
 
     @classmethod
@@ -158,7 +195,7 @@ class ChartService:
             ylabel='Amount ($)',
             colors=['#2196F3', '#FFC107', '#4CAF50', '#FF5722', '#9C27B0'],
             xlabel=None,
-            fmt='$%.2f'
+            fmt='$%.2f',
         )
 
     @classmethod
