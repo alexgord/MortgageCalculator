@@ -72,10 +72,11 @@ class NecessaryExpensesConfig:
 @dataclass
 class PropertiesListConfig:
     """Configuration for multiple properties"""
-    properties: List[PropertyConfig]
+    properties: dict[str, PropertyConfig]
     output_dir: str
     output_data: str
     output_report: str
+    report_types: List[str]
     chart: ChartConfig
     loan_parameters: LoanParametersConfig
     necessary_expenses: NecessaryExpensesConfig

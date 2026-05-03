@@ -1,12 +1,14 @@
 defaults:
-  - property1@property1
-  - property2@property2
+  - property1@properties.property1
+  - property2@properties.property2
   - _self_
 output_dir: example_properties_output
 output_data_format: csv
 output_data: properties_summary.${output_data_format}
-output_report_format: md
-output_report: properties_report.${output_report_format}
+output_report: properties_report
+report_types:
+  - MarkdownWriter
+  - HTMLWriter
 chart:
   width: 5
   height: 3
@@ -21,6 +23,3 @@ loan_parameters:
 necessary_expenses:
   notary_cost: 1000
   inspection_cost: 200
-properties:
-  - ${property1}
-  - ${property2}
