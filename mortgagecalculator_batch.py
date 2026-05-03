@@ -6,8 +6,12 @@ from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
 from config_dataclasses import PropertiesListConfig
 from mortgagecalculatorlib import calculate_mortgage_from_settings, validate_loan_config_and_properties, ValidationError
-from reportinglib import generate_markdown_report, ReportGenerationError
+from reporting import ReportGenerationError, generate_report
 from custom_types import MortgageResult
+from reportwriter import get_class_by_value
+from markdownlib import MarkdownWriter
+from htmllib import HTMLWriter
+from chart_service import ChartService
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,7 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
     
     # Calculate mortgages for all properties
     results: list[MortgageResult] = []
-    for i, prop in enumerate(cfg.properties, 1):
+    for i, (_, prop) in enumerate(cfg.properties.items(), 1):
         result = calculate_mortgage_from_settings(prop, cfg)
         results.append(result)
     
@@ -46,11 +50,25 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
         logger.error(f"Failed to write CSV to {output_data_file}: {e}")
         raise
     
-    try:
-        generate_markdown_report(output_report_file, results, cfg)
-    except (ReportGenerationError, ValueError) as e:
-        logger.error(f"Report generation failed: {e}")
-        raise
+    if cfg.report_types is None or len(cfg.report_types) == 0:
+        logger.error("No report types specified in configuration.")
+        raise ValueError("At least one report type must be specified in the configuration.")
+
+    print("Generating cost comparison charts...")
+    ChartService.generate_cost_comparison_charts(results, output_report_file.parent, cfg)
+
+    print("Generating property report charts...")
+    for (i,mortgage_result) in enumerate(results, 1):
+        print(f"Generating property report charts for property {i}...")
+        ChartService.generate_property_report_chart(i, mortgage_result, output_report_file.parent, cfg)
+
+    for report_type in cfg.report_types:
+        print(f"Generating report of type: {report_type}...")
+        try:
+            generate_report(report_type, output_report_file, results, cfg)
+        except (ReportGenerationError, ValueError) as e:
+            logger.error(f"Report generation failed: {e}")
+            raise
     
     print(f"\n✓ Results written to: {output_data_file.absolute()}")
     print(f"✓ Report written to: {output_report_file.absolute()}")

@@ -41,8 +41,8 @@ def validate_loan_config_and_properties(loan_cfg: PropertiesListConfig) -> None:
     if loan_cfg.necessary_expenses.inspection_cost < 0:
         errors.append(f"Inspection cost cannot be negative, got {loan_cfg.necessary_expenses.inspection_cost}")
 
-    for property in loan_cfg.properties:
-        errors.extend(get_property_config_errors(property, loan_cfg))
+    for (name, prop) in loan_cfg.properties.items():
+        errors.extend(get_property_config_errors(prop, loan_cfg))
     
     if errors:
         raise ValidationError("Loan configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
