@@ -61,7 +61,7 @@ class HTMLWriter(ReportWriter):
     
     @classmethod
     def initialize_report(cls, title: str) -> str:
-        return f"<!DOCTYPE html>\n<html>\n<head>\n<title>{title}</title>\n</head>\n<body>\n"
+        return f"<!DOCTYPE html>\n<html>\n<head>\n<title>{title}</title>\n</head>\n<body>\n\n{cls.print_header(title, level=1)}"
     
     @classmethod
     def finalize_report(cls) -> str:
