@@ -5,7 +5,7 @@ from pathlib import Path
 from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
 from config_dataclasses import PropertiesListConfig
-from mortgagecalculatorlib import calculate_mortgage_from_settings, validate_loan_config_and_properties, ValidationError
+from mortgagecalculatorlib import CalculatedAffordability, calculate_mortgage_from_settings, validate_loan_config_and_properties, ValidationError
 from reporting import ReportGenerationError, generate_report
 from custom_types import MortgageResult
 from reportwriter import get_class_by_value
@@ -36,6 +36,9 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
     
     print(f"Processing {len(cfg.properties)} properties...")
     
+    # Calculate theoretical ceiling for the largest mortgage you could get based on the loan parameters and standard banking guidelines
+    affordability = CalculatedAffordability(cfg)
+
     # Calculate mortgages for all properties
     results: list[MortgageResult] = []
     for i, (_, prop) in enumerate(cfg.properties.items(), 1):
@@ -65,7 +68,7 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
     for report_type in cfg.report_types:
         print(f"Generating report of type: {report_type}...")
         try:
-            generate_report(report_type, output_report_file, results, cfg)
+            generate_report(report_type, output_report_file, affordability, results, cfg)
         except (ReportGenerationError, ValueError) as e:
             logger.error(f"Report generation failed: {e}")
             raise

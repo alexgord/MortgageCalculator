@@ -7,7 +7,7 @@ import pandas as pd
 from config_dataclasses import PropertiesListConfig
 from custom_types import MortgageResult, ResultKeys as K
 
-# from chart_service import ChartService as cs
+from mortgagecalculatorlib import CalculatedAffordability
 from reportwriter import ReportWriter, get_class_by_value
 from markdownlib import MarkdownWriter
 from htmllib import HTMLWriter
@@ -30,13 +30,29 @@ def _format_rate(value: float) -> str:
     return f"{value:.5f}".rstrip('0').rstrip('.')
 
 
-def _write_personal_financial_details(buffer: io.StringIO, report_writer: ReportWriter, cfg: PropertiesListConfig) -> None:
+def _write_personal_financial_details(buffer: io.StringIO, report_writer: ReportWriter, cfg: PropertiesListConfig, affordability: CalculatedAffordability) -> None:
     personal_details_df = pd.DataFrame({
-        "Item": ["Down Payment", "Monthly Salary (Gross)", "Monthly Debt Payments"],
-        "Value": [f"${cfg.loan_parameters.down_payment:,.2f}", f"${cfg.loan_parameters.monthly_salary:,.2f}", f"${cfg.loan_parameters.monthly_debt_payment:,.2f}"]
+        "Item": ["Down Payment",
+                 "Monthly Salary (Gross)",
+                 "Monthly Debt Payments",
+                 report_writer.print_bold("*Maximum Monthly Mortgage Payment (Based on GDS/TDS guidelines)"),
+                 report_writer.print_bold("*Maximum Mortgage Amount (Based on GDS/TDS guidelines)")],
+        "Value": [f"${cfg.loan_parameters.down_payment:,.2f}",
+                  f"${cfg.loan_parameters.monthly_salary:,.2f}",
+                  f"${cfg.loan_parameters.monthly_debt_payment:,.2f}",
+                  f"${affordability.max_monthly_payment:,.2f}",
+                  f"${affordability.max_loan_amount:,.2f}"]
     })
     buffer.write(report_writer.print_header("Personal Financial Details", level=2))
     buffer.write(report_writer.print_table(personal_details_df))
+    buffer.write(report_writer.print_empty_line())
+
+    maximum_mortgage_warning = (
+        "*Note: These maximums are theoretical ceilings based on standard banking guidelines and do not guarantee loan approval. Actual approved amounts may vary based on lender criteria and other factors. "
+        "Maximum mortgage amount assumes all other costs are zero, such as property taxes, insurance, and condo fees. In reality, these costs will reduce the maximum mortgage amount you may qualify for. "
+        "Treat this value as a theoretical upper limit and sanity check rather than an exact figure you can expect to receive."
+    )
+    buffer.write(report_writer.print_paragraph(maximum_mortgage_warning))
     buffer.write(report_writer.print_empty_line())
 
 
@@ -72,7 +88,7 @@ def _write_single_property(buffer: io.StringIO, report_writer: ReportWriter, i: 
     affordability_df = pd.DataFrame({
         "Ratio": ["GDS (Gross Debt Service)", "TDS (Total Debt Service)"],
         "Value": [f"{_format_rate(row[K.GDS_RATIO])}%", f"{_format_rate(row[K.TDS_RATIO])}%"],
-        "Guideline": ["≤ 32%", "≤ 40%"]
+        "Guideline": [f"≤ {cfg.standard_banking_parameters.GDS}%", f"≤ {cfg.standard_banking_parameters.TDS}%"]
     })
     buffer.write(report_writer.print_header("Affordability Ratios", level=4))
     buffer.write(report_writer.print_table(affordability_df))
@@ -216,7 +232,7 @@ def _write_property_comparison_summary(buffer: io.StringIO, report_writer: Repor
     _write_rankings(buffer, report_writer, results)
 
 
-def generate_report(report_type: str, output_report_file_name: Path, results: list[MortgageResult], cfg: PropertiesListConfig) -> None:
+def generate_report(report_type: str, output_report_file_name: Path, affordability: CalculatedAffordability, results: list[MortgageResult], cfg: PropertiesListConfig) -> None:
     if not results:
         raise ValueError("Cannot generate report with empty results")
 
@@ -232,7 +248,7 @@ def generate_report(report_type: str, output_report_file_name: Path, results: li
         buffer.write(report_writer.initialize_report("Mortgage Calculation Report"))
         buffer.write(report_writer.print_paragraph(f"{report_writer.print_bold('Total Properties Analyzed:')} {len(results)}"))
 
-        _write_personal_financial_details(buffer, report_writer, cfg)
+        _write_personal_financial_details(buffer, report_writer, cfg, affordability)
 
         buffer.write(report_writer.print_header("Properties Analyzed", level=2))
         for i, row in enumerate(results, 1):
