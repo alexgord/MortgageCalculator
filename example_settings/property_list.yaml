@@ -14,6 +14,9 @@ chart:
   height: 3
   top_padding: 0.15
   dpi: 150
+standard_banking_parameters:
+  GDS: 32
+  TDS: 40
 loan_parameters:
   down_payment: 30000
   interest_rate: 3.57

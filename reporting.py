@@ -32,8 +32,16 @@ def _format_rate(value: float) -> str:
 
 def _write_personal_financial_details(buffer: io.StringIO, report_writer: ReportWriter, cfg: PropertiesListConfig, affordability: CalculatedAffordability) -> None:
     personal_details_df = pd.DataFrame({
-        "Item": ["Down Payment", "Monthly Salary (Gross)", "Monthly Debt Payments", report_writer.print_bold("Maximum Monthly Mortgage Payment (Based on GDS/TDS guidelines)"), report_writer.print_bold("Maximum Mortgage Amount (Based on GDS/TDS guidelines)")],
-        "Value": [f"${cfg.loan_parameters.down_payment:,.2f}", f"${cfg.loan_parameters.monthly_salary:,.2f}", f"${cfg.loan_parameters.monthly_debt_payment:,.2f}", f"${affordability.max_monthly_payment:,.2f}", f"${affordability.max_loan_amount:,.2f}"]
+        "Item": ["Down Payment",
+                 "Monthly Salary (Gross)",
+                 "Monthly Debt Payments",
+                 report_writer.print_bold("*Maximum Monthly Mortgage Payment (Based on GDS/TDS guidelines)"),
+                 report_writer.print_bold("*Maximum Mortgage Amount (Based on GDS/TDS guidelines)")],
+        "Value": [f"${cfg.loan_parameters.down_payment:,.2f}",
+                  f"${cfg.loan_parameters.monthly_salary:,.2f}",
+                  f"${cfg.loan_parameters.monthly_debt_payment:,.2f}",
+                  f"${affordability.max_monthly_payment:,.2f}",
+                  f"${affordability.max_loan_amount:,.2f}"]
     })
     buffer.write(report_writer.print_header("Personal Financial Details", level=2))
     buffer.write(report_writer.print_table(personal_details_df))
