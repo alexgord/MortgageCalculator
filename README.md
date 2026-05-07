@@ -216,21 +216,21 @@ $$
 The maximum monthly mortgage payment is the binding (lower) constraint of the GDS and TDS limits:
 
 $$
-\text{GDS max} = \frac{GDS\%}{100} \times \text{monthly\_salary}
+\text{GDS max} = \frac{GDS\%}{100} \times \text{monthly salary}
 $$
 
 $$
-\text{TDS max} = \frac{TDS\%}{100} \times \text{monthly\_salary} - \text{monthly\_debt\_payment}
+\text{TDS max} = \frac{TDS\%}{100} \times \text{monthly salary} - \text{monthly debt payment}
 $$
 
 $$
-\text{max\_payment} = \min(\text{GDS max},\ \text{TDS max})
+\text{max payment} = \min(\text{GDS max},\ \text{TDS max})
 $$
 
 The mortgage payment formula is then inverted to derive the maximum loan principal:
 
 $$
-\text{max\_loan} = \text{max\_payment} \times \frac{(1+r)^n - 1}{r(1+r)^n} + \text{down\_payment}
+\text{max loan} = \text{max payment} \times \frac{(1+r)^n - 1}{r(1+r)^n} + \text{down payment}
 $$
 
 This is a theoretical ceiling — actual lender approval may differ.
