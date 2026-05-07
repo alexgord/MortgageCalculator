@@ -177,6 +177,63 @@ def calculate_yearly_tax(value: float, rate_decimal: float) -> float:
     """Calculate yearly tax based on property value and tax rate (as decimal)."""
     return value * rate_decimal
 
+class CalculatedAffordability:
+    def __init__(self, cfg: PropertiesListConfig):
+        self.monthly_salary = cfg.loan_parameters.monthly_salary
+        self.monthly_debt_payment = cfg.loan_parameters.monthly_debt_payment
+        self.standard_gds = cfg.standard_banking_parameters.GDS
+        self.standard_tds = cfg.standard_banking_parameters.TDS
+        self.interest_rate_decimal = percent_to_decimal(cfg.loan_parameters.interest_rate)
+        self.years_of_loan = cfg.loan_parameters.years_of_loan
+        (max_payment, mortgage_amount) = self._max_loan_amount(cfg)
+        self.max_monthly_payment = max_payment
+        self.max_loan_amount = mortgage_amount
+
+    @classmethod
+    def _inverted_mortgage_payment(cls, max_payment: float, cfg: PropertiesListConfig) -> float:
+        """Calculate the monthly mortgage payment for a given loan amount."""
+        # Invert the mortgage payment formula: loan = payment * ((1+r)^n - 1) / (r * (1+r)^n)
+        if cfg.loan_parameters.interest_rate == 0:
+            return round(max_payment * (cfg.loan_parameters.years_of_loan * MONTHS_IN_YEAR), 2)
+
+        monthly_rate = calculate_monthly_interest_rate(percent_to_decimal(cfg.loan_parameters.interest_rate))
+        months = cfg.loan_parameters.years_of_loan * MONTHS_IN_YEAR
+        factor = pow(1 + monthly_rate, months)
+        return round(max_payment * (factor - 1) / (monthly_rate * factor), 2)
+
+    @classmethod
+    def _max_monthly_payment(cls, cfg: PropertiesListConfig) -> float:
+        """Calculate the maximum monthly mortgage payment allowed by GDS and TDS guidelines."""
+        gds_max_payment = (cfg.standard_banking_parameters.GDS / 100) * cfg.loan_parameters.monthly_salary
+        tds_max_payment = (cfg.standard_banking_parameters.TDS / 100) * cfg.loan_parameters.monthly_salary - cfg.loan_parameters.monthly_debt_payment
+
+
+
+        return min(gds_max_payment, tds_max_payment)
+
+    @classmethod
+    def _max_loan_amount(cls, cfg: PropertiesListConfig) -> tuple[float, float]:
+        """Calculate the largest mortgage loan permitted by GDS and TDS guidelines.
+
+        Derives the maximum allowable monthly mortgage payment from both ratios,
+        takes the binding (lower) constraint, then inverts the mortgage payment
+        formula to return the corresponding loan principal.
+
+        Args:
+            cfg: Configuration object containing loan parameters and standard banking parameters.
+
+        Returns:
+            Maximum loan amount in dollars, or 0.0 if no positive payment is feasible.
+        """
+        max_payment = cls._max_monthly_payment(cfg)
+
+        if max_payment <= 0:
+            return (0.0, 0.0)
+        
+        mortgage_amount = cls._inverted_mortgage_payment(max_payment, cfg) + cfg.loan_parameters.down_payment
+        return (max_payment, mortgage_amount)
+
+
 class CalculatedMortgage:
     def __init__(self, property_details: PropertyConfig, cfg: PropertiesListConfig):
         # Convert percentages to decimals at the boundary

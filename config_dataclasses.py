@@ -70,6 +70,12 @@ class NecessaryExpensesConfig:
     inspection_cost: float
 
 @dataclass
+class StandardBankingParametersConfig:
+    """Configuration for standard banking affordability guidelines (ratios as percentages)."""
+    GDS: float = 32.0
+    TDS: float = 40.0
+
+@dataclass
 class PropertiesListConfig:
     """Configuration for multiple properties"""
     properties: dict[str, PropertyConfig]
@@ -80,4 +86,4 @@ class PropertiesListConfig:
     chart: ChartConfig
     loan_parameters: LoanParametersConfig
     necessary_expenses: NecessaryExpensesConfig
-    
+    standard_banking_parameters: StandardBankingParametersConfig

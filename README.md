@@ -13,6 +13,13 @@ Python mortgage analysis tool for comparing multiple properties side-by-side. Th
 - Affordability metrics:
   - GDS ratio
   - TDS ratio
+  - Theoretical maximum mortgage ceiling (GDS/TDS bounded)
+- Report sections:
+  - Personal financial details (salary, debt, affordability ceiling)
+  - Per-property breakdowns (monthly, yearly, one-time costs)
+  - Side-by-side comparison table across all properties
+  - Rankings (by monthly cost, price/sqft, property value, area, rooms, GDS/TDS)
+  - Cost comparison charts
 - Report generation in multiple formats via pluggable writers:
   - Markdown (`MarkdownWriter`)
   - HTML (`HTMLWriter`)
@@ -79,6 +86,10 @@ chart:
   top_padding: 0.15
   dpi: 150
 
+standard_banking_parameters:
+  GDS: 32.0
+  TDS: 40.0
+
 loan_parameters:
   down_payment: 30000
   interest_rate: 3.57
@@ -94,6 +105,7 @@ necessary_expenses:
 Notes:
 - `properties` is a dictionary populated through Hydra defaults (`@properties.<name>`).
 - `output_report` is a basename. Extensions are added from `report_types`.
+- `standard_banking_parameters` sets the GDS and TDS ratio thresholds (as percentages) used for affordability ceiling calculations.
 
 ### Province Defaults (`province_details.yaml`)
 
@@ -198,6 +210,30 @@ $$
 $$
 Yearly\ Tax = Property\ Value \cdot \frac{Tax\ Rate}{100}
 $$
+
+### Affordability Ceiling
+
+The maximum monthly mortgage payment is the binding (lower) constraint of the GDS and TDS limits:
+
+$$
+\text{GDS max} = \frac{GDS\%}{100} \times \text{monthly\_salary}
+$$
+
+$$
+\text{TDS max} = \frac{TDS\%}{100} \times \text{monthly\_salary} - \text{monthly\_debt\_payment}
+$$
+
+$$
+\text{max\_payment} = \min(\text{GDS max},\ \text{TDS max})
+$$
+
+The mortgage payment formula is then inverted to derive the maximum loan principal:
+
+$$
+\text{max\_loan} = \text{max\_payment} \times \frac{(1+r)^n - 1}{r(1+r)^n} + \text{down\_payment}
+$$
+
+This is a theoretical ceiling — actual lender approval may differ.
 
 ## Runtime Overrides
 
