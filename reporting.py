@@ -34,21 +34,25 @@ def _write_personal_financial_details(buffer: io.StringIO, report_writer: Report
     personal_details_df = pd.DataFrame({
         "Item": ["Down Payment",
                  "Monthly Salary (Gross)",
+                 "Yearly Salary (Gross)",
                  "Monthly Debt Payments",
-                 report_writer.print_bold("*Maximum Monthly Mortgage Payment (Based on GDS/TDS guidelines)"),
-                 report_writer.print_bold("*Maximum Mortgage Amount (Based on GDS/TDS guidelines)")],
+                 report_writer.print_bold("*Maximum Monthly Mortgage Payment"),
+                 report_writer.print_bold("*Maximum Mortgage Amount"),
+                 report_writer.print_bold("*Maximum Property Value")],
         "Value": [f"${cfg.loan_parameters.down_payment:,.2f}",
                   f"${cfg.loan_parameters.monthly_salary:,.2f}",
+                  f"${affordability.yearly_salary:,.2f}",
                   f"${cfg.loan_parameters.monthly_debt_payment:,.2f}",
                   f"${affordability.max_monthly_payment:,.2f}",
-                  f"${affordability.max_loan_amount:,.2f}"]
+                  f"${affordability.max_loan_amount:,.2f}",
+                  f"${affordability.max_property_value:,.2f}"]
     })
     buffer.write(report_writer.print_header("Personal Financial Details", level=2))
     buffer.write(report_writer.print_table(personal_details_df))
     buffer.write(report_writer.print_empty_line())
 
     maximum_mortgage_warning = (
-        "*Note: These maximums are theoretical ceilings based on standard banking guidelines and do not guarantee loan approval. Actual approved amounts may vary based on lender criteria and other factors. "
+        "*Note: These maximums are theoretical ceilings based on standard banking guidelines (GDS and TDS) and do not guarantee loan approval. Actual approved amounts may vary based on lender criteria and other factors. "
         "Maximum mortgage amount assumes all other costs are zero, such as property taxes, insurance, and condo fees. In reality, these costs will reduce the maximum mortgage amount you may qualify for. "
         "Treat this value as a theoretical upper limit and sanity check rather than an exact figure you can expect to receive."
     )
