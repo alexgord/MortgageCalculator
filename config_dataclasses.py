@@ -46,6 +46,10 @@ class PropertyConfig:
     address: Optional[str] = None
     link: Optional[str] = None
 
+    pros: Optional[List[str]] = None
+    cons: Optional[List[str]] = None
+    status: Optional[str] = None
+
 @dataclass
 class ChartConfig:
     """Configuration for chart dimensions and rendering."""
@@ -76,6 +80,12 @@ class StandardBankingParametersConfig:
     TDS: float = 40.0
 
 @dataclass
+class UsefulLink:
+    """Configuration for useful links"""
+    name: str
+    url: str
+
+@dataclass
 class PropertiesListConfig:
     """Configuration for multiple properties"""
     properties: dict[str, PropertyConfig]
@@ -87,3 +97,4 @@ class PropertiesListConfig:
     loan_parameters: LoanParametersConfig
     necessary_expenses: NecessaryExpensesConfig
     standard_banking_parameters: StandardBankingParametersConfig
+    useful_links: Optional[List[UsefulLink]] = None

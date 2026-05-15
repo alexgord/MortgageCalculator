@@ -5,7 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from config_dataclasses import PropertiesListConfig
-from custom_types import MortgageResult, ResultKeys as K
+from custom_types import MortgageInformation, MortgageResult, ResultKeys as K
 
 matplotlib.use('Agg')  # Use non-interactive backend for saving files
 
@@ -118,9 +118,9 @@ class ChartService:
         return f'${value:.0f}'
 
     @classmethod
-    def generate_monthly_report_chart(cls, results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_monthly_report_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate monthly costs comparison chart."""
-        monthly_costs = [row[K.TOTAL_MONTHLY_COSTS] for row in results]
+        monthly_costs = [mi.mortgage_result[K.TOTAL_MONTHLY_COSTS] for mi in results]
         cls.create_bar_chart(
             labels=labels,
             values=monthly_costs,
@@ -133,15 +133,15 @@ class ChartService:
         )
 
     @classmethod
-    def generate_yearly_report_chart(cls, results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
-        """Generate yearly costs comparison chart."""
-        yearly_costs = [row[K.TOTAL_YEARLY_COSTS] for row in results]
+    def generate_annual_fixed_non_mortgage_costs_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+        """Generate annual fixed non-mortgage costs comparison chart."""
+        annual_fixed_non_mortgage_costs = [mi.mortgage_result[K.ANNUAL_FIXED_NON_MORTGAGE_COSTS] for mi in results]
         cls.create_bar_chart(
             labels=labels,
-            values=yearly_costs,
-            output_path=output_dir / 'yearly_summary.png',
+            values=annual_fixed_non_mortgage_costs,
+            output_path=output_dir / 'annual_fixed_non_mortgage_costs_summary.png',
             cfg=cfg,
-            title='Total Yearly Costs by Property',
+            title='Annual Fixed Non-Mortgage Costs by Property',
             ylabel='Amount ($)',
             colors=cls._cycle_colors(len(results)),
             label_fontsize=8,
@@ -149,9 +149,26 @@ class ChartService:
         )
 
     @classmethod
-    def generate_property_value_report_chart(cls, results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_yearly_cost_comparison_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+        """Generate yearly cost comparison chart."""
+        yearly_costs = [mi.mortgage_result[K.TOTAL_YEARLY_COSTS] for mi in results]
+        cls.create_bar_chart(
+            labels=labels,
+            values=yearly_costs,
+            output_path=output_dir / 'yearly_cost_summary.png',
+            cfg=cfg,
+            title='Total Yearly Costs by Property',
+            ylabel='Total Yearly Cost ($)',
+            colors=cls._cycle_colors(len(results)),
+            label_fontsize=8,
+            compact_labels=True,
+            ymin_padding=0.10,
+        )
+
+    @classmethod
+    def generate_property_value_report_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate property value comparison chart."""
-        property_values = [row[K.PROPERTY_VALUE] for row in results]
+        property_values = [mi.mortgage_result[K.PROPERTY_VALUE] for mi in results]
         cls.create_bar_chart(
             labels=labels,
             values=property_values,
@@ -166,9 +183,9 @@ class ChartService:
         )
 
     @classmethod
-    def generate_one_time_report_chart(cls, results: list[MortgageResult], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_one_time_report_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate one-time costs comparison chart."""
-        one_time_costs = [row[K.TOTAL_ONE_TIME_COSTS] for row in results]
+        one_time_costs = [mi.mortgage_result[K.TOTAL_ONE_TIME_COSTS] for mi in results]
         cls.create_bar_chart(
             labels=labels,
             values=one_time_costs,
@@ -182,10 +199,10 @@ class ChartService:
         )
 
     @classmethod
-    def generate_monthly_breakdown_chart(cls, property_number: int, result: MortgageResult, output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_monthly_breakdown_chart(cls, property_number: int, result: MortgageInformation, output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate monthly cost breakdown chart for a single property."""
         categories = ['Mortgage Payment', 'Condo Fees', 'Property Tax', 'School Tax', 'Home Insurance']
-        values = [result[K.MONTHLY_MORTGAGE_PAYMENT], result[K.CONDO_FEES], result[K.MONTHLY_PROPERTY_TAX], result[K.MONTHLY_SCHOOL_TAX], result[K.MONTHLY_HOME_INSURANCE]]
+        values = [result.mortgage_result[K.MONTHLY_MORTGAGE_PAYMENT], result.mortgage_result[K.CONDO_FEES], result.mortgage_result[K.MONTHLY_PROPERTY_TAX], result.mortgage_result[K.MONTHLY_SCHOOL_TAX], result.mortgage_result[K.MONTHLY_HOME_INSURANCE]]
         cls.create_bar_chart(
             labels=categories,
             values=values,
@@ -199,10 +216,10 @@ class ChartService:
         )
 
     @classmethod
-    def generate_yearly_breakdown_chart(cls, property_number: int, result: MortgageResult, output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_yearly_breakdown_chart(cls, property_number: int, result: MortgageInformation, output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate yearly cost breakdown chart for a single property."""
-        categories = ['Property Tax', 'School Tax', 'Home Insurance']
-        values = [result[K.YEARLY_PROPERTY_TAX], result[K.YEARLY_SCHOOL_TAX], result[K.YEARLY_HOME_INSURANCE]]
+        categories = ['Property Tax', 'School Tax', 'Home Insurance', 'Condo Fees', 'Mortgage Payment']
+        values = [result.mortgage_result[K.YEARLY_PROPERTY_TAX], result.mortgage_result[K.YEARLY_SCHOOL_TAX], result.mortgage_result[K.YEARLY_HOME_INSURANCE], result.mortgage_result[K.YEARLY_CONDO_FEE_COST], result.mortgage_result[K.YEARLY_MORTGAGE_PAYMENT]]
         cls.create_bar_chart(
             labels=categories,
             values=values,
@@ -210,16 +227,16 @@ class ChartService:
             cfg=cfg,
             title=f'Yearly Cost Breakdown for Property {property_number}',
             ylabel='Amount ($)',
-            colors=['#8BC34A', '#FF5722', '#9C27B0'],
+            colors=['#8BC34A', '#FF5722', '#9C27B0', '#FFC107', '#2196F3'],
             xlabel=None,
             fmt='$%.2f',
         )
 
     @classmethod
-    def generate_one_time_breakdown_chart(cls, property_number: int, result: MortgageResult, output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_one_time_breakdown_chart(cls, property_number: int, result: MortgageInformation, output_dir: Path, cfg: PropertiesListConfig) -> None:
         """Generate one-time cost breakdown chart for a single property."""
         categories = ['Land Transfer Tax', 'Notary Cost', 'Inspection Cost']
-        values = [result[K.LAND_TRANSFER_TAX], result[K.NOTARY_COST], result[K.INSPECTION_COST]]
+        values = [result.mortgage_result[K.LAND_TRANSFER_TAX], result.mortgage_result[K.NOTARY_COST], result.mortgage_result[K.INSPECTION_COST]]
         cls.create_bar_chart(
             labels=categories,
             values=values,
@@ -233,16 +250,76 @@ class ChartService:
         )
 
     @classmethod
-    def generate_property_report_chart(cls, property_number: int, result: MortgageResult, output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_property_report_chart(cls, property_number: int, result: MortgageInformation, output_dir: Path, cfg: PropertiesListConfig) -> None:
         cls.generate_monthly_breakdown_chart(property_number, result, output_dir, cfg)
         cls.generate_yearly_breakdown_chart(property_number, result, output_dir, cfg)
         cls.generate_one_time_breakdown_chart(property_number, result, output_dir, cfg)
 
     @classmethod
-    def generate_cost_comparison_charts(cls, results: list[MortgageResult], output_dir: Path, cfg: PropertiesListConfig) -> None:
+    def generate_monthly_mortgage_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+        """Generate monthly mortgage payment comparison chart."""
+        monthly_mortgages = [mi.mortgage_result[K.MONTHLY_MORTGAGE_PAYMENT] for mi in results]
+        cls.create_bar_chart(
+            labels=labels,
+            values=monthly_mortgages,
+            output_path=output_dir / 'monthly_mortgage_summary.png',
+            cfg=cfg,
+            title='Monthly Mortgage Payment by Property',
+            ylabel='Monthly Mortgage Payment ($)',
+            colors=cls._cycle_colors(len(results)),
+            ymin_padding=0.10,
+        )
+
+    @classmethod
+    def generate_monthly_condo_fees_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+        """Generate monthly condo fees comparison chart."""
+        condo_fees = [mi.mortgage_result[K.CONDO_FEES] for mi in results]
+        filtered = [(lbl, val) for lbl, val in zip(labels, condo_fees) if val > 0]
+        if not filtered:
+            logger.info("Skipping monthly condo fees chart: no properties have condo fees.")
+            return
+        filtered_labels, filtered_values = zip(*filtered)
+        cls.create_bar_chart(
+            labels=list(filtered_labels),
+            values=list(filtered_values),
+            output_path=output_dir / 'monthly_condo_fees_summary.png',
+            cfg=cfg,
+            title='Monthly Condo Fees by Property',
+            ylabel='Monthly Condo Fees ($)',
+            colors=cls._cycle_colors(len(filtered_labels)),
+            ymin_padding=0.10,
+        )
+
+    @classmethod
+    def generate_price_per_sqft_chart(cls, results: list[MortgageInformation], labels: list[str], output_dir: Path, cfg: PropertiesListConfig) -> None:
+        """Generate price per square foot comparison chart."""
+        price_per_sqft = [mi.mortgage_result[K.PRICE_PER_SQFT] for mi in results]
+        filtered = [(lbl, val) for lbl, val in zip(labels, price_per_sqft) if val > 0]
+        if not filtered:
+            logger.info("Skipping price per sqft chart: no properties have area data.")
+            return
+        filtered_labels, filtered_values = zip(*filtered)
+        cls.create_bar_chart(
+            labels=list(filtered_labels),
+            values=list(filtered_values),
+            output_path=output_dir / 'price_per_sqft_summary.png',
+            cfg=cfg,
+            title='Price per Square Foot by Property',
+            ylabel='Price per sqft ($)',
+            colors=cls._cycle_colors(len(filtered_labels)),
+            fmt='$%.0f',
+            ymin_padding=0.10,
+        )
+
+    @classmethod
+    def generate_cost_comparison_charts(cls, results: list[MortgageInformation], output_dir: Path, cfg: PropertiesListConfig) -> None:
         labels = [f"Property {i + 1}" for i, row in enumerate(results)]
 
         cls.generate_monthly_report_chart(results, labels, output_dir, cfg)
+        cls.generate_monthly_mortgage_chart(results, labels, output_dir, cfg)
+        cls.generate_monthly_condo_fees_chart(results, labels, output_dir, cfg)
+        cls.generate_price_per_sqft_chart(results, labels, output_dir, cfg)
         cls.generate_one_time_report_chart(results, labels, output_dir, cfg)
-        cls.generate_yearly_report_chart(results, labels, output_dir, cfg)
+        cls.generate_annual_fixed_non_mortgage_costs_chart(results, labels, output_dir, cfg)
         cls.generate_property_value_report_chart(results, labels, output_dir, cfg)
+        cls.generate_yearly_cost_comparison_chart(results, labels, output_dir, cfg)

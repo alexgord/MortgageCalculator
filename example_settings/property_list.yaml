@@ -26,3 +26,8 @@ loan_parameters:
 necessary_expenses:
   notary_cost: 1000
   inspection_cost: 200
+useful_links:
+  - name: Sesame Street Real Estate
+    url: https://www.sesamestreet.com/realestate
+  - name: Mortgage Rate Calculator
+    url: https://www.mortgagecalculator.net

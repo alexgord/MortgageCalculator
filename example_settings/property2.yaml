@@ -10,3 +10,10 @@ bedrooms: 2
 bathrooms: 1
 area_sqft: 1500
 year_built: 2002
+status: Pending Offer
+pros:
+  - Spacious living area
+  - Quiet neighborhood
+cons:
+  - Older roof
+  - No garage

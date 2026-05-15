@@ -112,36 +112,20 @@ def percent_to_decimal(percentage: float) -> float:
     return percentage / 100
 
 
-def land_transfer_tax_rate_decimal(value: float, brackets: list[LandTransferTaxBracket]) -> float:
-    """
-    Calculate land transfer tax rate based on property value and configured brackets.
-    
-    Brackets should be ordered from highest threshold to lowest.
-    
-    Args:
-        value: Property value in dollars
-        brackets: List of tax brackets (threshold/rate pairs, rate as percentage)
-        
-    Returns:
-        Tax rate as decimal (e.g., 0.015 for 1.5%)
-        
-    Raises:
-        ValueError: If no brackets are configured
-    """
-    if not brackets:
-        raise ValueError("No land transfer tax brackets configured")
-    
-    for bracket in brackets:
-        if value > bracket.threshold:
-            return percent_to_decimal(bracket.rate)
-    
-    # Fall through to the last bracket's rate
-    return percent_to_decimal(brackets[-1].rate)
-
-
 def calculate_land_transfer_tax(value: float, brackets: list[LandTransferTaxBracket]) -> float:
     """Calculate the land transfer tax amount for a property."""
-    return value * land_transfer_tax_rate_decimal(value, brackets)
+    if not brackets:
+        return 0.0
+
+    bracket = brackets[0]
+
+    if value <= bracket.threshold:
+        return calculate_land_transfer_tax(value, brackets[1:])
+
+    taxable_amount = value - bracket.threshold
+    tax = taxable_amount * percent_to_decimal(bracket.rate)
+    return tax + calculate_land_transfer_tax(bracket.threshold, brackets[1:])
+
 
 
 def calculate_monthly_interest_rate(yearly_rate_decimal: float) -> float:
@@ -251,7 +235,6 @@ class CalculatedMortgage:
         
         # Calculate all mortgage related values
         brackets = property_details.land_transfer_tax_brackets
-        self.land_transfer_tax_rate = round(land_transfer_tax_rate_decimal(property_details.value, brackets), 7)
         self.land_transfer_tax = round(calculate_land_transfer_tax(property_details.value, brackets), 2)
         one_time_costs = [cfg.necessary_expenses.notary_cost, cfg.necessary_expenses.inspection_cost, self.land_transfer_tax]
         self.all_one_time_costs = round(sum(one_time_costs), 2)
@@ -262,8 +245,9 @@ class CalculatedMortgage:
         self.monthly_school_tax = round(self.yearly_school_tax / MONTHS_IN_YEAR, 2)
         yearly_home_insurance = round(property_details.yearly_home_insurance, 2)
         self.monthly_home_insurance = round(yearly_home_insurance / MONTHS_IN_YEAR, 2)
-        yearly_costs = [self.yearly_property_tax, self.yearly_school_tax, yearly_home_insurance]
-        self.total_yearly_costs = round(sum(yearly_costs), 2)
+        self.yearly_condo_fee_cost = round(property_details.condo_fees * MONTHS_IN_YEAR, 2)
+        annual_fixed_non_mortgage_costs = [self.yearly_property_tax, self.yearly_school_tax, yearly_home_insurance, self.yearly_condo_fee_cost]
+        self.annual_fixed_non_mortgage_costs = round(sum(annual_fixed_non_mortgage_costs), 2)
         self.loan_amount = round(property_details.value - cfg.loan_parameters.down_payment, 2)
         self.mortgage_payment = round(calculate_mortgage_payment(interest_rate_decimal, cfg.loan_parameters.years_of_loan, self.loan_amount), 2)
         monthly_interest_rate = calculate_monthly_interest_rate(interest_rate_decimal)
@@ -280,9 +264,21 @@ class CalculatedMortgage:
             self.monthly_home_insurance,
         ]
         self.total_monthly_costs = round(sum(monthly_costs), 2)
+        self.yearly_mortgage_payment = round(self.mortgage_payment * MONTHS_IN_YEAR, 2)
+        self.total_yearly_costs =  round(self.annual_fixed_non_mortgage_costs + self.yearly_mortgage_payment, 2)
+        self.total_paid_over_loan = round(self.mortgage_payment *(cfg.loan_parameters.years_of_loan * MONTHS_IN_YEAR), 2)
+        self.total_cost_of_ownership_over_loan_without_down_payment = round(self.total_monthly_costs * (cfg.loan_parameters.years_of_loan * MONTHS_IN_YEAR), 2)
+        self.total_cost_of_ownership_over_loan = cfg.loan_parameters.down_payment + round(self.total_monthly_costs * (cfg.loan_parameters.years_of_loan * MONTHS_IN_YEAR), 2)
         affordability_monthly_costs = self.total_monthly_costs + cfg.loan_parameters.monthly_debt_payment
         self.gds_ratio = round(self.total_monthly_costs / cfg.loan_parameters.monthly_salary * 100, 2) if cfg.loan_parameters.monthly_salary > 0 else 0.0
         self.tds_ratio = round(affordability_monthly_costs / cfg.loan_parameters.monthly_salary * 100, 2) if cfg.loan_parameters.monthly_salary > 0 else 0.0
+
+    @classmethod
+    def _to_google_maps_link(cls, address: str) -> str:
+        import urllib.parse
+        encoded_address = urllib.parse.quote_plus(address)
+        map_link = f"https://www.google.com/maps/search/?api=1&query={encoded_address}"
+        return map_link
 
     def to_result(self, property_details: PropertyConfig, cfg: PropertiesListConfig) -> MortgageResult:
         """Convert the calculated mortgage to a MortgageResult for reporting.
@@ -297,6 +293,7 @@ class CalculatedMortgage:
         return MortgageResult(
             Description=property_details.description or "",
             Address=property_details.address or "",
+            Google_Maps_Link=self._to_google_maps_link(property_details.address) if property_details.address else "",
             Link=property_details.link or "",
             Bedrooms=property_details.bedrooms or "",
             Bathrooms=property_details.bathrooms or "",
@@ -313,7 +310,7 @@ class CalculatedMortgage:
             Total_Interest=self.total_interest,
             Condo_Fees=property_details.condo_fees,
             Total_Monthly_Costs=self.total_monthly_costs,
-            Land_Transfer_Tax_Rate=self.land_transfer_tax_rate * 100,
+            Yearly_Mortgage_Payment=self.yearly_mortgage_payment,
             Land_Transfer_Tax=self.land_transfer_tax,
             Notary_Cost=cfg.necessary_expenses.notary_cost,
             Inspection_Cost=cfg.necessary_expenses.inspection_cost,
@@ -327,7 +324,12 @@ class CalculatedMortgage:
             Monthly_School_Tax=self.monthly_school_tax,
             Yearly_Home_Insurance=property_details.yearly_home_insurance,
             Monthly_Home_Insurance=self.monthly_home_insurance,
+            Yearly_Condo_Fee_Cost=self.yearly_condo_fee_cost,
+            Annual_Fixed_Non_Mortgage_Costs=self.annual_fixed_non_mortgage_costs,
             Total_Yearly_Costs=self.total_yearly_costs,
+            Total_Paid_Over_Loan=self.total_paid_over_loan,
+            Total_Cost_of_Ownership_Over_Loan=self.total_cost_of_ownership_over_loan,
+            Total_Cost_of_Ownership_Over_Loan_Without_Down_Payment=self.total_cost_of_ownership_over_loan_without_down_payment,
             Price_Per_Sqft=self.price_per_sqft,
             Monthly_Salary=cfg.loan_parameters.monthly_salary,
             Monthly_Debt_Payment=cfg.loan_parameters.monthly_debt_payment,

@@ -10,3 +10,10 @@ bedrooms: 2
 bathrooms: 1
 area_sqft: 1000
 year_built: 2000
+status: For Sale
+pros:
+  - Close to public transit
+  - Recently renovated kitchen
+cons:
+  - Small backyard
+  - Busy street
