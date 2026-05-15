@@ -23,20 +23,25 @@ class HTMLWriter(ReportWriter):
         if df.empty:
             return "<p>No data available.</p>\n\n"
         
+        th_style = "style='padding: 6px 12px; border-bottom: 2px solid #888; text-align: left;'"
+        td_style = "style='padding: 5px 12px; border-bottom: 1px solid #ccc;'"
+        table_style = "style='border-collapse: collapse;'"
+
         # Header
-        header = "<tr>" + "".join(f"<th>{col}</th>" for col in df.columns) + "</tr>\n"
+        header = "<tr>" + "".join(f"<th {th_style}>{col}</th>" for col in df.columns) + "</tr>\n"
         
         # Rows
         rows = ""
         for _, row in df.iterrows():
-            rows += "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>\n"
-        
+            rows += "<tr>" + "".join(f"<td {td_style}>{cell}</td>" for cell in row) + "</tr>\n"
 
-        return "<table>\n" + header + rows + "</table>\n\n"
+        return f"<table {table_style}>\n" + header + rows + "</table>\n\n"
 
     @classmethod
-    def print_list(cls, items: list[str], numbered: bool = False) -> str:
+    def print_list(cls, items: list[str], numbered: bool = False, inline: bool = False) -> str:
         tag = "ol" if numbered else "ul"
+        if inline:
+            return f"<{tag} style='display: inline;'>" + "".join(f"  <li>{item}</li>" for item in items) + f"</{tag}>"
         return f"<{tag}>\n" + "".join(f"  <li>{item}</li>\n" for item in items) + f"</{tag}>\n\n"
 
     @classmethod

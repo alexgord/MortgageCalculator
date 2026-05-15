@@ -16,8 +16,10 @@ Python mortgage analysis tool for comparing multiple properties side-by-side. Th
   - Theoretical maximum mortgage ceiling (GDS/TDS bounded)
 - Report sections:
   - Personal financial details (salary, debt, affordability ceiling)
-  - Per-property breakdowns (monthly, yearly, one-time costs)
-  - Side-by-side comparison table across all properties
+  - Per-property breakdowns (monthly, yearly, one-time costs, cash to close, affordability ratios, land transfer tax brackets)
+  - Per-property pros, cons, and status notes
+  - Address links auto-resolved to Google Maps
+  - Side-by-side comparison table across all properties (property info, physical details, monthly/annual/one-time costs, cost over loan term, affordability, notes)
   - Rankings (by monthly cost, price/sqft, property value, area, rooms, GDS/TDS)
   - Cost comparison charts
 - Report generation in multiple formats via pluggable writers:
@@ -81,8 +83,8 @@ report_types:
   - HTMLWriter
 
 chart:
-  width: 5
-  height: 3
+  width: 6
+  height: 4
   top_padding: 0.15
   dpi: 150
 
@@ -106,6 +108,15 @@ Notes:
 - `properties` is a dictionary populated through Hydra defaults (`@properties.<name>`).
 - `output_report` is a basename. Extensions are added from `report_types`.
 - `standard_banking_parameters` sets the GDS and TDS ratio thresholds (as percentages) used for affordability ceiling calculations.
+- An optional `useful_links` list can be added at the top level:
+
+```yaml
+useful_links:
+  - name: Bank rate calculator
+    url: https://www.ratehub.ca/mortgage-payment-calculator
+  - name: CMHC affordability tool
+    url: https://www.cmhc-schl.gc.ca/consumers/home-buying/calculators
+```
 
 ### Province Defaults (`province_details.yaml`)
 
@@ -147,7 +158,17 @@ bedrooms: 2
 bathrooms: 1
 area_sqft: 1000
 year_built: 2000
+
+# Optional notes
+pros:
+  - Close to transit
+  - New kitchen
+cons:
+  - Small backyard
+status: Available
 ```
+
+The `pros`, `cons`, and `status` fields are optional. They appear in the per-property report section and in the side-by-side comparison table.
 
 ## Outputs
 
@@ -158,7 +179,7 @@ Typical output files:
 - `properties_report.html` (when `HTMLWriter` is enabled)
 - Global comparison charts:
   - `monthly_summary.png`
-  - `yearly_summary.png`
+  - `annual_fixed_non_mortgage_costs_summary.png`
   - `one_time_summary.png`
   - `property_value_summary.png`
 - Per-property charts:
@@ -170,14 +191,17 @@ Typical output files:
 
 The CSV includes a flattened `MortgageResult` per property, including:
 
-- Property metadata: `Description`, `Address`, `Link`, `Bedrooms`, `Bathrooms`, `Area`, `Year_Built`
+- Property metadata: `Description`, `Address`, `Google_Maps_Link`, `Link`, `Bedrooms`, `Bathrooms`, `Area`, `Year_Built`
 - Core financing: `Property_Value`, `Down_Payment`, `Loan_Amount`, `Interest_Rate`, `Years_of_Loan`
 - Mortgage cost metrics: `Monthly_Mortgage_Payment`, `Monthly_Interest`, `Yearly_Interest`, `Total_Interest`
-- Monthly costs and totals
-- One-time costs and cash-to-close
-- Yearly taxes/insurance and totals
+- Monthly costs and totals: `Condo_Fees`, `Monthly_Property_Tax`, `Monthly_School_Tax`, `Monthly_Home_Insurance`, `Total_Monthly_Costs`
+- One-time costs and cash-to-close: `Land_Transfer_Tax_Rate`, `Land_Transfer_Tax`, `Notary_Cost`, `Inspection_Cost`, `Total_One_Time_Costs`, `Cash_to_Close`
+- Yearly taxes/insurance and totals: `Yearly_Property_Tax`, `Yearly_School_Tax`, `Yearly_Home_Insurance`, `Annual_Fixed_Non_Mortgage_Costs`, `Yearly_Mortgage_Payment`, `Total_Yearly_Costs`
+- Loan-term totals: `Total_Paid_Over_Loan`, `Total_Cost_of_Ownership_Over_Loan`, `Total_Cost_of_Ownership_Over_Loan_Without_Down_Payment`
 - Value metric: `Price_Per_Sqft`
-- Affordability metrics: `GDS_Ratio`, `TDS_Ratio`
+- Affordability metrics: `Monthly_Salary`, `Monthly_Debt_Payment`, `GDS_Ratio`, `TDS_Ratio`
+
+`Google_Maps_Link` is auto-generated from `address` using the Google Maps search URL.
 
 ## How Calculations Work
 

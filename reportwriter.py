@@ -26,7 +26,7 @@ class ReportWriter(ABC):
     
     @classmethod
     @abstractmethod
-    def print_list(cls, items: list[str], numbered: bool = False) -> str:
+    def print_list(cls, items: list[str], numbered: bool = False, inline: bool = False) -> str:
         pass
     
     @classmethod

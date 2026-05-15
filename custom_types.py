@@ -2,11 +2,14 @@
 
 from typing import TypedDict
 
+from config_dataclasses import PropertyConfig
+
 
 class ResultKeys:
     """Constants for MortgageResult dictionary keys."""
     DESCRIPTION = 'Description'
     ADDRESS = 'Address'
+    GOOGLE_MAPS_LINK = 'Google_Maps_Link'
     LINK = 'Link'
     BEDROOMS = 'Bedrooms'
     BATHROOMS = 'Bathrooms'
@@ -23,6 +26,7 @@ class ResultKeys:
     TOTAL_INTEREST = 'Total_Interest'
     CONDO_FEES = 'Condo_Fees'
     TOTAL_MONTHLY_COSTS = 'Total_Monthly_Costs'
+    YEARLY_MORTGAGE_PAYMENT = 'Yearly_Mortgage_Payment'
     LAND_TRANSFER_TAX_RATE = 'Land_Transfer_Tax_Rate'
     LAND_TRANSFER_TAX = 'Land_Transfer_Tax'
     NOTARY_COST = 'Notary_Cost'
@@ -37,6 +41,11 @@ class ResultKeys:
     MONTHLY_SCHOOL_TAX = 'Monthly_School_Tax'
     YEARLY_HOME_INSURANCE = 'Yearly_Home_Insurance'
     MONTHLY_HOME_INSURANCE = 'Monthly_Home_Insurance'
+    YEARLY_CONDO_FEE_COST = 'Yearly_Condo_Fee_Cost'
+    ANNUAL_FIXED_NON_MORTGAGE_COSTS = 'Annual_Fixed_Non_Mortgage_Costs'
+    TOTAL_PAID_OVER_LOAN = 'Total_Paid_Over_Loan'
+    TOTAL_COST_OF_OWNERSHIP_OVER_LOAN = 'Total_Cost_of_Ownership_Over_Loan'
+    TOTAL_COST_OF_OWNERSHIP_OVER_LOAN_WITHOUT_DOWN_PAYMENT = 'Total_Cost_of_Ownership_Over_Loan_Without_Down_Payment'
     TOTAL_YEARLY_COSTS = 'Total_Yearly_Costs'
     PRICE_PER_SQFT = 'Price_Per_Sqft'
     MONTHLY_SALARY = 'Monthly_Salary'
@@ -53,6 +62,7 @@ class MortgageResult(TypedDict):
     """
     Description: str
     Address: str
+    Google_Maps_Link: str
     Link: str
     Bedrooms: str | int
     Bathrooms: str | int
@@ -69,6 +79,7 @@ class MortgageResult(TypedDict):
     Total_Interest: float
     Condo_Fees: float
     Total_Monthly_Costs: float
+    Yearly_Mortgage_Payment: float
     Land_Transfer_Tax_Rate: float
     Land_Transfer_Tax: float
     Notary_Cost: float
@@ -83,9 +94,19 @@ class MortgageResult(TypedDict):
     Monthly_School_Tax: float
     Yearly_Home_Insurance: float
     Monthly_Home_Insurance: float
+    Yearly_Condo_Fee_Cost: float
+    Annual_Fixed_Non_Mortgage_Costs: float
     Total_Yearly_Costs: float
+    Total_Paid_Over_Loan: float
+    Total_Cost_of_Ownership_Over_Loan: float
+    Total_Cost_of_Ownership_Over_Loan_Without_Down_Payment: float
     Price_Per_Sqft: float
     Monthly_Salary: float
     Monthly_Debt_Payment: float
     GDS_Ratio: float
     TDS_Ratio: float
+
+class MortgageInformation:
+    def __init__(self, property_config: PropertyConfig, mortgage_result: MortgageResult):
+        self.property_config = property_config
+        self.mortgage_result = mortgage_result

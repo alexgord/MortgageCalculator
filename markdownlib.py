@@ -35,10 +35,13 @@ class MarkdownWriter(ReportWriter):
         return header + separator + rows + "\n"
 
     @classmethod
-    def print_list(cls, items: list[str], numbered: bool = False) -> str:
+    def print_list(cls, items: list[str], numbered: bool = False, inline: bool = False) -> str:
 
         def get_prefix(i: int) -> str:
             return f"{i+1}." if numbered else "-"
+        if inline:
+            tag = "ol" if numbered else "ul"
+            return f"<{tag} style='display: inline;'>" + "".join(f"  <li>{item}</li>" for item in items) + f"</{tag}>"
         return "\n".join(f"{get_prefix(i)} {item}" for i, item in enumerate(items)) + "\n\n"
 
     @classmethod

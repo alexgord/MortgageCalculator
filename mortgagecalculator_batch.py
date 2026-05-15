@@ -7,7 +7,7 @@ from omegaconf import OmegaConf
 from config_dataclasses import PropertiesListConfig
 from mortgagecalculatorlib import CalculatedAffordability, calculate_mortgage_from_settings, validate_loan_config_and_properties, ValidationError
 from reporting import ReportGenerationError, generate_report
-from custom_types import MortgageResult
+from custom_types import MortgageInformation, MortgageResult
 from reportwriter import get_class_by_value
 from markdownlib import MarkdownWriter
 from htmllib import HTMLWriter
@@ -40,13 +40,13 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
     affordability = CalculatedAffordability(cfg)
 
     # Calculate mortgages for all properties
-    results: list[MortgageResult] = []
+    mortgage_information_list = []
     for i, (_, prop) in enumerate(cfg.properties.items(), 1):
         result = calculate_mortgage_from_settings(prop, cfg)
-        results.append(result)
+        mortgage_information_list.append(MortgageInformation(property_config=prop, mortgage_result=result))
     
     # Create DataFrame and write to CSV
-    df = pd.DataFrame(results)
+    df = pd.DataFrame([mi.mortgage_result for mi in mortgage_information_list])
     try:
         df.to_csv(output_data_file, index=False, encoding='utf-8')
     except OSError as e:
@@ -58,24 +58,24 @@ def batch_calculate(cfg: PropertiesListConfig) -> None:
         raise ValueError("At least one report type must be specified in the configuration.")
 
     print("Generating cost comparison charts...")
-    ChartService.generate_cost_comparison_charts(results, output_report_file.parent, cfg)
+    ChartService.generate_cost_comparison_charts(mortgage_information_list, output_report_file.parent, cfg)
 
     print("Generating property report charts...")
-    for (i,mortgage_result) in enumerate(results, 1):
+    for (i, mi) in enumerate(mortgage_information_list, 1):
         print(f"Generating property report charts for property {i}...")
-        ChartService.generate_property_report_chart(i, mortgage_result, output_report_file.parent, cfg)
+        ChartService.generate_property_report_chart(i, mi, output_report_file.parent, cfg)
 
     for report_type in cfg.report_types:
         print(f"Generating report of type: {report_type}...")
         try:
-            generate_report(report_type, output_report_file, affordability, results, cfg)
+            generate_report(report_type, output_report_file, affordability, mortgage_information_list, cfg)
         except (ReportGenerationError, ValueError) as e:
             logger.error(f"Report generation failed: {e}")
             raise
     
     print(f"\n✓ Results written to: {output_data_file.absolute()}")
     print(f"✓ Report written to: {output_report_file.absolute()}")
-    print(f"  Total properties processed: {len(results)}")
+    print(f"  Total properties processed: {len(mortgage_information_list)}")
 
 if __name__ == "__main__":
     batch_calculate()
